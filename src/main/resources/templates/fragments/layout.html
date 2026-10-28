@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+
+<!-- ============ HEAD: tipografia, Bootstrap e folha de estilos do projeto ============ -->
+<head th:fragment="head-imports(titulo)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${titulo} + ' | Arquitetura MVC'">Arquitetura MVC</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/mvc.css}">
+</head>
+
+<body>
+
+<!-- ============ CABEÇALHO: navegação principal com página ativa ============ -->
+<nav th:fragment="cabecalho(ativa)" class="topbar navbar navbar-expand-lg sticky-top" aria-label="Navegação principal">
+    <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+    <div class="container-xl">
+        <a class="navbar-brand marca" th:href="@{/}">
+            <span class="marca-icone" aria-hidden="true">MVC</span>
+            <span>Arquitetura MVC<small>Spring Boot · Thymeleaf</small></span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu"
+                aria-controls="menu" aria-expanded="false" aria-label="Abrir menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="menu">
+            <ul class="navbar-nav ms-auto gap-lg-1">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}" th:classappend="${ativa == 'inicio'} ? 'active'"
+                       th:attr="aria-current=${ativa == 'inicio' ? 'page' : null}">Visão geral</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/model}" th:classappend="${ativa == 'model'} ? 'active'"
+                       th:attr="aria-current=${ativa == 'model' ? 'page' : null}">Model</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/view}" th:classappend="${ativa == 'view'} ? 'active'"
+                       th:attr="aria-current=${ativa == 'view' ? 'page' : null}">View</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/controller}" th:classappend="${ativa == 'controller'} ? 'active'"
+                       th:attr="aria-current=${ativa == 'controller' ? 'page' : null}">Controller</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/db}" th:classappend="${ativa == 'db'} ? 'active'"
+                       th:attr="aria-current=${ativa == 'db' ? 'page' : null}">Dados em memória</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!--
+    ============ DIAGRAMA MVC (abaixo do título de cada página) ============
+    Uso: <div th:replace="~{fragments/layout :: diagrama('model')}"></div>
+
+    O parâmetro "ativa" define o que fica aceso. Em cada página ficam ativas
+    apenas as setas que PARTEM da camada em foco, na cor dessa camada:
+      inicio     -> Model, View, Controller e todas as setas (cada uma na cor da sua origem)
+      model | db -> só o Model; setas A e E
+      controller -> só o Controller; setas B e C
+      view       -> só a View; seta D
+
+    As variáveis corA..corE guardam a cor de cada seta:
+      A: Model -> Controller   B: Controller -> Model   C: Controller -> View
+      D: View -> Controller    E: Model -> View
+    Valores possíveis: model, controller, view ou nenhuma (seta apagada).
+-->
+<figure th:fragment="diagrama(ativa)" class="mvc-figura"
+        th:with="corA=${ativa == 'inicio' or ativa == 'model' or ativa == 'db'} ? 'model' : 'nenhuma',
+                 corB=${ativa == 'inicio' or ativa == 'controller'} ? 'controller' : 'nenhuma',
+                 corC=${ativa == 'inicio' or ativa == 'controller'} ? 'controller' : 'nenhuma',
+                 corD=${ativa == 'inicio' or ativa == 'view'} ? 'view' : 'nenhuma',
+                 corE=${ativa == 'inicio' or ativa == 'model' or ativa == 'db'} ? 'model' : 'nenhuma'">
+
+    <svg class="mvc-diagrama" viewBox="0 0 720 200" role="group"
+         aria-label="Diagrama MVC com as interações entre Model, View e Controller">
+        <defs>
+            <marker id="ponta-model" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#4338ca"></path>
+            </marker>
+            <marker id="ponta-controller" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#b45309"></path>
+            </marker>
+            <marker id="ponta-view" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#0f766e"></path>
+            </marker>
+            <marker id="ponta-nenhuma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M0 0 L10 5 L0 10 z" fill="#cbd5e1"></path>
+            </marker>
+        </defs>
+
+        <!-- Seta A: Model -> Controller -->
+        <path class="seta" d="M70 136 V29 H266"
+              th:classappend="'cor-' + ${corA}" th:attr="marker-end='url(#ponta-' + ${corA} + ')'"></path>
+        <text class="seta-rotulo" x="78" y="78"
+              th:classappend="'rot-' + ${corA}">Modelo alterado</text>
+
+        <!-- Seta B: Controller -> Model -->
+        <path class="seta" d="M295 54 V112 H160 V132"
+              th:classappend="'cor-' + ${corB}" th:attr="marker-end='url(#ponta-' + ${corB} + ')'"></path>
+        <text class="seta-rotulo" x="227" y="106" text-anchor="middle"
+              th:classappend="'rot-' + ${corB}">Atualiza o modelo</text>
+
+        <!-- Seta C: Controller -> View -->
+        <path class="seta" d="M425 54 V112 H560 V132"
+              th:classappend="'cor-' + ${corC}" th:attr="marker-end='url(#ponta-' + ${corC} + ')'"></path>
+        <text class="seta-rotulo" x="493" y="106" text-anchor="middle"
+              th:classappend="'rot-' + ${corC}">Atualiza a interface</text>
+
+        <!-- Seta D: View -> Controller -->
+        <path class="seta" d="M650 136 V29 H454"
+              th:classappend="'cor-' + ${corD}" th:attr="marker-end='url(#ponta-' + ${corD} + ')'"></path>
+        <text class="seta-rotulo" x="642" y="78" text-anchor="end"
+              th:classappend="'rot-' + ${corD}">Ações do usuário</text>
+
+        <!-- Seta E: Model -> View -->
+        <path class="seta" d="M210 161 H506"
+              th:classappend="'cor-' + ${corE}" th:attr="marker-end='url(#ponta-' + ${corE} + ')'"></path>
+        <text class="seta-rotulo" x="358" y="154" text-anchor="middle"
+              th:classappend="'rot-' + ${corE}">Modelo alterado</text>
+
+        <!-- Controller -->
+        <a class="no no-controller" th:href="@{/controller}"
+           th:classappend="${ativa == 'inicio' or ativa == 'controller'} ? 'ligado' : 'apagado'"
+           th:attr="aria-current=${ativa == 'controller' ? 'page' : null}">
+            <rect x="270" y="4" width="180" height="50" rx="10"></rect>
+            <text class="nome" x="360" y="25" text-anchor="middle">Controller</text>
+            <text class="sub" x="360" y="42" text-anchor="middle">Mediação</text>
+        </a>
+
+        <!-- Model -->
+        <a class="no no-model" th:href="@{/model}"
+           th:classappend="${ativa == 'inicio' or ativa == 'model' or ativa == 'db'} ? 'ligado' : 'apagado'"
+           th:attr="aria-current=${ativa == 'model' ? 'page' : null}">
+            <rect x="30" y="136" width="180" height="50" rx="10"></rect>
+            <text class="nome" x="120" y="157" text-anchor="middle">Model</text>
+            <text class="sub" x="120" y="174" text-anchor="middle">Domínio e estado</text>
+        </a>
+
+        <!-- View -->
+        <a class="no no-view" th:href="@{/view}"
+           th:classappend="${ativa == 'inicio' or ativa == 'view'} ? 'ligado' : 'apagado'"
+           th:attr="aria-current=${ativa == 'view' ? 'page' : null}">
+            <rect x="510" y="136" width="180" height="50" rx="10"></rect>
+            <text class="nome" x="600" y="157" text-anchor="middle">View</text>
+            <text class="sub" x="600" y="174" text-anchor="middle">Apresentação</text>
+        </a>
+    </svg>
+
+    <figcaption
+        th:text="${ativa == 'inicio'} ? 'Visão geral das interações entre Model, View e Controller.' : (${ativa == 'db'} ? 'Em foco: Model, que mantém o estado em memória.' : (' Em foco: ' + ${#strings.capitalize(ativa)} + '.'))">
+        Visão geral das interações entre Model, View e Controller.</figcaption>
+</figure>
+
+<!-- ============ RODAPÉ + scripts ============ -->
+<footer th:fragment="rodape" class="rodape">
+    <div class="container-xl">
+        <p>Estudo de caso acadêmico: padrão arquitetural MVC com Spring Boot, Thymeleaf e Bootstrap 5.
+            Cada página deste site foi renderizada no servidor (Server-Side Rendering).</p>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/mvc.js}"></script>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head-imports('Controller')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: cabecalho('controller')}"></nav>
+
+<div class="doc">
+<main id="conteudo" class="artigo">
+
+    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Controller</span></nav>
+
+    <header>
+        <h1>Camada Controller: mediação e roteamento</h1>
+        <p class="lead">O Controller recebe as requisições HTTP, coordena o acesso ao Model e determina qual View
+            comporá a resposta.</p>
+        <ul class="tags"><li class="selo selo-controller">Controller</li><li class="selo">Roteamento</li><li class="selo">Injeção de atributos</li></ul>
+    </header>
+
+    <div th:replace="~{fragments/layout :: diagrama('controller')}"></div>
+
+    <section aria-labelledby="fundamentacao">
+        <h2 id="fundamentacao">1. Fundamentação teórica</h2>
+        <p>O Controller atua como mediador entre a interface e o domínio. Em Spring MVC, essa função é distribuída entre
+            o <code>DispatcherServlet</code>, que implementa o padrão Front Controller, e os métodos de classes anotadas
+            com <code>@Controller</code>, responsáveis pelo tratamento de cada rota.</p>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: Inversão de Controle</span>
+            <p>A instância de <code>MvcPaginasController</code> não é criada pelo código da aplicação, e sim pelo contêiner
+                do Spring, que também decide quando seus métodos serão invocados. O desenvolvedor declara o mapeamento por
+                anotações e delega o fluxo de execução ao framework.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="instancias">
+        <h2 id="instancias">2. Instâncias associadas ao Controller</h2>
+        <p>Cartões gerados por <code>th:each</code> sobre o atributo <code>listaController</code>.</p>
+
+        <div class="row g-3" th:unless="${#lists.isEmpty(listaController)}">
+            <div class="col-md-6 col-lg-4" th:each="c : ${listaController}">
+                <article class="cartao">
+                    <span class="selo selo-controller" th:text="${c.componente}">Controller</span>
+                    <h3 th:text="${c.titulo}">Título</h3>
+                    <p th:text="${c.descricao}">Descrição</p>
+                    <p class="meta">Camada: <strong th:text="${c.camada}">Comunicação</strong></p>
+                </article>
+            </div>
+        </div>
+
+        <div class="callout callout-obs" th:if="${#lists.isEmpty(listaController)}">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>O atributo <code>listaController</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="metodo">
+        <h2 id="metodo">3. Anatomia de um método de rota</h2>
+        <p>O método <code>paginaModel</code> ilustra as quatro responsabilidades típicas de um manipulador de requisição:
+            mapeamento, consulta, publicação de atributos e seleção da View.</p>
+
+        <figure class="terminal">
+            <figcaption>controller/MvcPaginasController.java</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@GetMapping</span>(<span class="tk-s">"/model"</span>)                <span class="tk-c">// 1. Mapeamento: GET /model aciona este método</span>
+<span class="tk-k">public</span> String paginaModel(Model model) {
+
+    List&lt;ConceitoMVC&gt; apenasModel = listaConceitos.stream()    <span class="tk-c">// 2. Consulta ao estado</span>
+            .filter(c -&gt; c.getComponente().equalsIgnoreCase(<span class="tk-s">"Model"</span>))
+            .collect(Collectors.toList());
+
+    model.addAttribute(<span class="tk-s">"listaModel"</span>, apenasModel);  <span class="tk-c">// 3. Injeção de atributos</span>
+
+    <span class="tk-k">return</span> <span class="tk-s">"model"</span>;                         <span class="tk-c">// 4. Nome lógico da View</span>
+}</code></pre>
+        </figure>
+
+        <div class="callout callout-obs">
+            <span class="callout-titulo">⚠️ Observação Técnica: dois sentidos para “Model”</span>
+            <p>A camada Model é o domínio de dados (<code>ConceitoMVC</code>). O parâmetro <code>Model model</code>, do pacote
+                <code>org.springframework.ui</code>, é apenas o contêiner de atributos que transporta informações do
+                Controller até a View durante a requisição. Os nomes coincidem, mas os papéis são distintos.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="rotas">
+        <h2 id="rotas">4. Mapa de rotas</h2>
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead>
+                <tr><th scope="col">Rota</th><th scope="col">Método Java</th><th scope="col">Atributo injetado</th><th scope="col">View lógica</th></tr>
+                </thead>
+                <tbody>
+                <tr><td><code>GET /</code></td><td><code>inicio</code></td><td><code>totalConceitos</code></td><td><code>inicio</code></td></tr>
+                <tr><td><code>GET /model</code></td><td><code>paginaModel</code></td><td><code>listaModel</code></td><td><code>model</code></td></tr>
+                <tr><td><code>GET /view</code></td><td><code>paginaView</code></td><td><code>listaView</code></td><td><code>view</code></td></tr>
+                <tr><td><code>GET /controller</code></td><td><code>paginaController</code></td><td><code>listaController</code></td><td><code>controller</code></td></tr>
+                <tr><td><code>GET /db</code></td><td><code>paginaDb</code></td><td><code>todosConceitos</code></td><td><code>db</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <p>Durante a inicialização, o Spring instancia o Controller uma única vez (escopo <em>singleton</em>) e registra
+                suas rotas no <em>HandlerMapping</em>. A cada requisição, o <code>DispatcherServlet</code> consulta esse
+                registro e invoca o método correspondente.</p>
+        </div>
+    </section>
+
+    <div class="proxima">
+        <a th:href="@{/view}">← Camada View</a>
+        <a th:href="@{/db}">Dados em memória →</a>
+    </div>
+
+</main>
+
+<aside class="toc" aria-label="Nesta página">
+    <p class="toc-titulo">Nesta página</p>
+    <ul>
+        <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
+        <li><a href="#instancias">2. Instâncias associadas</a></li>
+        <li><a href="#metodo">3. Anatomia de um método</a></li>
+        <li><a href="#rotas">4. Mapa de rotas</a></li>
+    </ul>
+</aside>
+</div>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

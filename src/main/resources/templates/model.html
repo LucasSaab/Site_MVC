@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head-imports('Model')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: cabecalho('model')}"></nav>
+
+<div class="doc">
+<main id="conteudo" class="artigo">
+
+    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Model</span></nav>
+
+    <header>
+        <h1>Camada Model: representação do domínio</h1>
+        <p class="lead">O Model encapsula o estado da aplicação e os objetos de domínio, de forma independente do
+            protocolo de comunicação e da interface com o usuário.</p>
+        <ul class="tags"><li class="selo selo-model">Model</li><li class="selo">POJO</li><li class="selo">Encapsulamento</li></ul>
+    </header>
+
+    <div th:replace="~{fragments/layout :: diagrama('model')}"></div>
+
+    <section aria-labelledby="fundamentacao">
+        <h2 id="fundamentacao">1. Fundamentação teórica</h2>
+        <p>Na formulação clássica do padrão, o Model é a fonte de verdade sobre os dados. Ele não referencia View nem
+            Controller, o que permite reutilizá-lo em outros contextos de apresentação.</p>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: independência da apresentação</span>
+            <p>Uma classe de Model não deve importar tipos de HTML, de template ou de transporte HTTP. A dependência flui
+                sempre no sentido Controller → Model e View → Model, nunca no inverso.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="instancias">
+        <h2 id="instancias">2. Instâncias recuperadas pelo Controller</h2>
+        <p>Os cartões abaixo são gerados por <code>th:each</code> a partir do atributo <code>listaModel</code>,
+            resultado do filtro aplicado à lista em memória.</p>
+
+        <div class="row g-3" th:unless="${#lists.isEmpty(listaModel)}">
+            <div class="col-md-6 col-lg-4" th:each="c : ${listaModel}">
+                <article class="cartao">
+                    <span class="selo selo-model" th:text="${c.componente}">Model</span>
+                    <h3 th:text="${c.titulo}">Título</h3>
+                    <p th:text="${c.descricao}">Descrição</p>
+                    <p class="meta">Camada: <strong th:text="${c.camada}">Backend</strong></p>
+                </article>
+            </div>
+        </div>
+
+        <div class="callout callout-obs" th:if="${#lists.isEmpty(listaModel)}">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>O atributo <code>listaModel</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
+        </div>
+
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <p>O Controller aplica <code>stream().filter(...)</code> sobre a lista mantida em memória e injeta o
+                subconjunto resultante no escopo da requisição com <code>addAttribute</code>. O template apenas itera
+                sobre esse atributo.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="pojo">
+        <h2 id="pojo">3. Anatomia do POJO <code>ConceitoMVC</code></h2>
+        <p>Um <em>Plain Old Java Object</em> é uma classe sem dependência de frameworks para sua definição: contém
+            apenas estado e métodos de acesso.</p>
+
+        <figure class="terminal">
+            <figcaption>model/ConceitoMVC.java</figcaption>
+<pre th:inline="none"><code><span class="tk-k">package</span> com.catalogo.mvc.model;
+
+<span class="tk-k">public class</span> ConceitoMVC {
+
+    <span class="tk-c">// Estado encapsulado</span>
+    <span class="tk-k">private int</span> id;
+    <span class="tk-k">private</span> String componente;
+    <span class="tk-k">private</span> String titulo;
+    <span class="tk-k">private</span> String descricao;
+    <span class="tk-k">private</span> String camada;
+
+    <span class="tk-c">// Construtor padrão</span>
+    <span class="tk-k">public</span> ConceitoMVC() { }
+
+    <span class="tk-c">// Construtor parametrizado</span>
+    <span class="tk-k">public</span> ConceitoMVC(<span class="tk-k">int</span> id, String componente, String titulo,
+                       String descricao, String camada) { ... }
+
+    <span class="tk-c">// Acessores e mutadores (JavaBeans)</span>
+    <span class="tk-k">public</span> String getTitulo() { <span class="tk-k">return</span> titulo; }
+    <span class="tk-k">public void</span> setTitulo(String titulo) { <span class="tk-k">this</span>.titulo = titulo; }
+    <span class="tk-c">// ... demais atributos seguem o mesmo padrão</span>
+}</code></pre>
+        </figure>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Elemento</th><th scope="col">Papel arquitetural</th></tr></thead>
+                <tbody>
+                <tr><td>Atributos <code>private</code></td><td>Encapsulamento do estado: o acesso externo ocorre apenas por métodos públicos.</td></tr>
+                <tr><td>Construtor padrão</td><td>Permite a instanciação por reflexão, exigida por mecanismos de Data Binding e serialização.</td></tr>
+                <tr><td>Construtor parametrizado</td><td>Inicialização completa e atômica do objeto, usada no carregamento dos dados de exemplo.</td></tr>
+                <tr><td>Getters e setters</td><td>Contrato JavaBeans. O Thymeleaf resolve <code>c.titulo</code> invocando <code>getTitulo()</code>.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout callout-obs">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>A classe é um modelo de domínio anêmico (<em>anemic domain model</em>): possui estado, mas nenhum
+                comportamento. A escolha é adequada ao escopo didático, embora modelos mais ricos incorporem regras de negócio.</p>
+        </div>
+    </section>
+
+    <div class="proxima">
+        <a th:href="@{/}">← Visão geral</a>
+        <a th:href="@{/view}">Camada View →</a>
+    </div>
+
+</main>
+
+<aside class="toc" aria-label="Nesta página">
+    <p class="toc-titulo">Nesta página</p>
+    <ul>
+        <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
+        <li><a href="#instancias">2. Instâncias recuperadas</a></li>
+        <li><a href="#pojo">3. Anatomia do POJO</a></li>
+    </ul>
+</aside>
+</div>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

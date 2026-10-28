@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head-imports('Dados em memória')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: cabecalho('db')}"></nav>
+
+<div class="doc">
+<main id="conteudo" class="artigo">
+
+    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Dados em memória</span></nav>
+
+    <header>
+        <h1>Estado volátil em memória</h1>
+        <p class="lead">Visão consolidada da coleção <code>List&lt;ConceitoMVC&gt;</code> mantida pelo Controller,
+            utilizada como substituto simplificado de um mecanismo de persistência.</p>
+        <ul class="tags"><li class="selo">Memória RAM</li><li class="selo">Estado volátil</li></ul>
+    </header>
+
+    <div th:replace="~{fragments/layout :: diagrama('db')}"></div>
+
+    <section aria-labelledby="registros">
+        <h2 id="registros">1. Registros armazenados</h2>
+        <p>A tabela é gerada por <code>th:each</code> sobre o atributo <code>todosConceitos</code>. Os filtros operam
+            no navegador e não realizam nova requisição ao servidor.</p>
+
+        <div class="filtros" role="group" aria-label="Filtrar por componente">
+            <button type="button" class="filtro" data-filtro="todos" aria-pressed="true">Todos</button>
+            <button type="button" class="filtro" data-filtro="Model" aria-pressed="false">Model</button>
+            <button type="button" class="filtro" data-filtro="View" aria-pressed="false">View</button>
+            <button type="button" class="filtro" data-filtro="Controller" aria-pressed="false">Controller</button>
+        </div>
+
+        <p aria-live="polite">Exibindo <strong id="db-contador" th:text="${#lists.size(todosConceitos)}">3</strong>
+            de <strong th:text="${#lists.size(todosConceitos)}">3</strong> registros.</p>
+
+        <div class="tabela-wrap" th:unless="${#lists.isEmpty(todosConceitos)}">
+            <table class="tabela">
+                <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Componente</th>
+                    <th scope="col">Título</th>
+                    <th scope="col">Descrição</th>
+                    <th scope="col">Camada</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${todosConceitos}" th:attr="data-componente=${c.componente}">
+                    <td th:text="${c.id}">1</td>
+                    <td><span class="selo" th:classappend="'selo-' + ${#strings.toLowerCase(c.componente)}"
+                              th:text="${c.componente}">Model</span></td>
+                    <td th:text="${c.titulo}">Título</td>
+                    <td th:text="${c.descricao}">Descrição</td>
+                    <td th:text="${c.camada}">Backend</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout callout-obs" th:if="${#lists.isEmpty(todosConceitos)}">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>O atributo <code>todosConceitos</code> está vazio: a coleção em memória não possui registros.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="limitacoes">
+        <h2 id="limitacoes">2. Limitações da abordagem</h2>
+
+        <div class="callout callout-obs">
+            <span class="callout-titulo">⚠️ Observação Técnica: volatilidade</span>
+            <p>Os dados residem no heap da JVM. Ao reiniciar a aplicação, a coleção retorna ao estado definido no construtor
+                do Controller, pois não há persistência em disco.</p>
+        </div>
+
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <p>Como o Controller é um bean singleton, a mesma instância da lista é compartilhada por todas as requisições.
+                A coleção utilizada não é thread-safe, o que é aceitável para demonstração com acesso apenas de leitura,
+                mas inadequado quando há escrita concorrente.</p>
+        </div>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: persistência e camadas de acesso a dados</span>
+            <p>Em sistemas de produção, o estado é delegado a um mecanismo de persistência, em geral com camadas
+                dedicadas de acesso a dados. Este projeto as omite deliberadamente para manter o foco na colaboração
+                entre Model, View e Controller.</p>
+        </div>
+    </section>
+
+    <div class="proxima">
+        <a th:href="@{/controller}">← Camada Controller</a>
+        <a th:href="@{/}">Visão geral →</a>
+    </div>
+
+</main>
+
+<aside class="toc" aria-label="Nesta página">
+    <p class="toc-titulo">Nesta página</p>
+    <ul>
+        <li><a href="#registros">1. Registros armazenados</a></li>
+        <li><a href="#limitacoes">2. Limitações da abordagem</a></li>
+    </ul>
+</aside>
+</div>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

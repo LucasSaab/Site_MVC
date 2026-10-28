@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar('projetos')}"></nav>
+
+<main class="container-xl py-4">
+
+    <!-- Título da página -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h1 class="h3 mb-0">Dashboard de Projetos</h1>
+            <p class="text-secondary mb-0">Acompanhe o andamento do portfólio de TI.</p>
+        </div>
+        <a class="btn btn-primary" th:href="@{/projetos/novo}">
+            <i class="bi bi-plus-lg me-1"></i>Novo projeto
+        </a>
+    </div>
+
+    <!-- Mensagem de retorno (criar, editar, excluir) -->
+    <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${mensagem}">
+        <i class="bi bi-check-circle me-1"></i><span th:text="${mensagem}">Operação realizada.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    </div>
+
+    <!-- KPIs: os números vêm do Controller (model.addAttribute) -->
+    <section class="row g-3 mb-4" aria-label="Indicadores">
+        <div class="col-6 col-lg-3">
+            <div class="kpi kpi-total">
+                <div class="kpi-icone"><i class="bi bi-folder2-open"></i></div>
+                <div>
+                    <div class="kpi-valor" th:text="${totalProjetos}">0</div>
+                    <div class="kpi-rotulo">Total de projetos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi kpi-planejado">
+                <div class="kpi-icone"><i class="bi bi-calendar-event"></i></div>
+                <div>
+                    <div class="kpi-valor" th:text="${planejados}">0</div>
+                    <div class="kpi-rotulo">Planejados</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi kpi-andamento">
+                <div class="kpi-icone"><i class="bi bi-arrow-repeat"></i></div>
+                <div>
+                    <div class="kpi-valor" th:text="${emAndamento}">0</div>
+                    <div class="kpi-rotulo">Em andamento</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi kpi-concluido">
+                <div class="kpi-icone"><i class="bi bi-check2-circle"></i></div>
+                <div>
+                    <div class="kpi-valor" th:text="${concluidos}">0</div>
+                    <div class="kpi-rotulo">Concluídos</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tabela: th:each repete a linha <tr> para cada projeto da lista -->
+    <section class="card painel">
+        <div class="card-header bg-white fw-semibold">Todos os projetos</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Projeto</th>
+                    <th scope="col">Responsável</th>
+                    <th scope="col">Prioridade</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Prazo</th>
+                    <th scope="col" class="text-end">Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${projetos}">
+                    <td class="text-secondary" th:text="${p.id}">1</td>
+                    <td>
+                        <div class="fw-semibold" th:text="${p.nome}">Nome</div>
+                        <div class="small text-secondary" th:text="${p.descricao}">Descrição</div>
+                    </td>
+                    <td th:text="${p.responsavel}">Responsável</td>
+                    <!-- Badge de prioridade: a cor depende do texto guardado no Model -->
+                    <td><span class="badge"
+                              th:classappend="${p.prioridade == 'Alta'} ? 'text-bg-danger' : (${p.prioridade == 'Média'} ? 'text-bg-warning' : 'text-bg-success')"
+                              th:text="${p.prioridade}">Média</span></td>
+                    <!-- Badge de status -->
+                    <td><span class="badge"
+                              th:classappend="${p.status == 'Concluído'} ? 'text-bg-success' : (${p.status == 'Em andamento'} ? 'text-bg-primary' : 'text-bg-secondary')"
+                              th:text="${p.status}">Planejado</span></td>
+                    <td th:text="${#temporals.format(p.prazo, 'dd/MM/yyyy')}">01/01/2027</td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-primary"
+                           th:href="@{/projetos/{id}/editar(id=${p.id})}">
+                            <i class="bi bi-pencil-square me-1"></i>Editar
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#modalExcluir"
+                                th:attr="data-nome=${p.nome}, data-acao=@{/projetos/{id}/excluir(id=${p.id})}">
+                            <i class="bi bi-trash me-1"></i>Excluir
+                        </button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(projetos)}">
+                    <td colspan="7" class="text-center text-secondary py-5">
+                        Nenhum projeto cadastrado. Clique em “Novo projeto” para começar.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="tituloModalExcluir" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="formExcluir" method="post">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="tituloModalExcluir">Excluir projeto</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza de que deseja excluir <strong id="nomeProjetoExcluir"></strong>?
+                Essa ação não pode ser desfeita.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger">Excluir</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+
+<script>
+    // Preenche o modal com o nome e a rota do projeto escolhido
+    document.getElementById('modalExcluir').addEventListener('show.bs.modal', function (evento) {
+        var botao = evento.relatedTarget;
+        document.getElementById('nomeProjetoExcluir').textContent = botao.getAttribute('data-nome');
+        document.getElementById('formExcluir').setAttribute('action', botao.getAttribute('data-acao'));
+    });
+</script>
+</body>
+</html>

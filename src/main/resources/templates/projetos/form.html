@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header(${projeto.id == null ? 'Novo projeto' : 'Editar projeto'})}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar(${projeto.id == null ? 'novo' : 'projetos'})}"></nav>
+
+<main class="container-xl py-4">
+
+    <div class="mb-4">
+        <h1 class="h3 mb-0" th:text="${projeto.id == null} ? 'Novo projeto' : 'Editar projeto'">Novo projeto</h1>
+        <p class="text-secondary mb-0">Preencha os dados e clique em salvar.</p>
+    </div>
+
+    <section class="card painel">
+        <div class="card-body p-4">
+
+            <!--
+                O mesmo formulário serve para criar e editar:
+                - projeto sem id  -> envia para /projetos/criar
+                - projeto com id  -> envia para /projetos/{id}/atualizar
+                th:object liga o formulário ao objeto "projeto" enviado pelo Controller.
+                th:field="*{nome}" preenche o campo com projeto.getNome()
+                e, no envio, o Spring chama projeto.setNome(...).
+            -->
+            <form th:object="${projeto}" method="post"
+                  th:action="${projeto.id == null} ? @{/projetos/criar} : @{/projetos/{id}/atualizar(id=${projeto.id})}">
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label for="nome" class="form-label">Nome do projeto</label>
+                        <input type="text" class="form-control" id="nome" th:field="*{nome}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="responsavel" class="form-label">Responsável</label>
+                        <input type="text" class="form-control" id="responsavel" th:field="*{responsavel}">
+                    </div>
+
+                    <div class="col-12">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" rows="3" th:field="*{descricao}"></textarea>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" th:field="*{status}">
+                            <option th:each="s : ${statusOpcoes}" th:value="${s}" th:text="${s}">Planejado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="prioridade" class="form-label">Prioridade</label>
+                        <select class="form-select" id="prioridade" th:field="*{prioridade}">
+                            <option th:each="pr : ${prioridadeOpcoes}" th:value="${pr}" th:text="${pr}">Média</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="prazo" class="form-label">Prazo</label>
+                        <input type="date" class="form-control" id="prazo" th:field="*{prazo}">
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a class="btn btn-outline-secondary" th:href="@{/projetos}">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Salvar projeto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

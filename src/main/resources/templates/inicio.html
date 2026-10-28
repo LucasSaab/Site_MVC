@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head-imports('Visão geral')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: cabecalho('inicio')}"></nav>
+
+<div class="doc">
+<main id="conteudo" class="artigo">
+
+    <nav class="trilha" aria-label="Localização"><span>Arquitetura MVC</span><span>Visão geral</span></nav>
+
+    <header>
+        <h1>Model-View-Controller em aplicações web com Spring Boot</h1>
+        <p class="lead">Estudo de caso de uma aplicação com Server-Side Rendering que separa estado, lógica de requisição
+            e apresentação em três camadas com responsabilidades distintas e baixo acoplamento.</p>
+        <ul class="tags" aria-label="Tecnologias">
+            <li class="selo">Java 17</li>
+            <li class="selo">Spring Boot 3</li>
+            <li class="selo">Thymeleaf</li>
+            <li class="selo">Bootstrap 5</li>
+            <li class="selo">Server-Side Rendering</li>
+        </ul>
+        <p class="estado">
+            <strong th:text="${totalConceitos}">3</strong>
+            <span>instâncias de <code>ConceitoMVC</code> mantidas em memória pelo Controller</span>
+        </p>
+    </header>
+
+    <div th:replace="~{fragments/layout :: diagrama('inicio')}"></div>
+
+    <!-- 1. FUNDAMENTAÇÃO -->
+    <section aria-labelledby="fundamentacao">
+        <h2 id="fundamentacao">1. Fundamentação teórica</h2>
+        <p>O padrão Model-View-Controller organiza uma aplicação interativa segundo o princípio da separação de
+            responsabilidades (<em>separation of concerns</em>). Cada camada encapsula uma dimensão do problema e
+            expõe a outras apenas o contrato necessário para a colaboração.</p>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: desacoplamento</span>
+            <p>A divisão em camadas reduz a dependência mútua entre componentes. A View pode ser redesenhada sem
+                modificar a estrutura de dados, e a lógica de roteamento pode evoluir sem alterar o modelo de
+                apresentação. O custo é a necessidade de um mecanismo explícito de comunicação entre as camadas.</p>
+        </div>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead>
+                <tr><th scope="col">Camada</th><th scope="col">Artefato no projeto</th><th scope="col">Responsabilidade</th><th scope="col">Detalhamento</th></tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><span class="selo selo-model">Model</span></td>
+                    <td><code>ConceitoMVC</code> e <code>List&lt;ConceitoMVC&gt;</code></td>
+                    <td>Representar o estado e os objetos de domínio da aplicação.</td>
+                    <td><a th:href="@{/model}">Camada Model</a></td>
+                </tr>
+                <tr>
+                    <td><span class="selo selo-view">View</span></td>
+                    <td>Templates HTML, Thymeleaf e Bootstrap</td>
+                    <td>Apresentar os dados recebidos, sem executar lógica de negócio.</td>
+                    <td><a th:href="@{/view}">Camada View</a></td>
+                </tr>
+                <tr>
+                    <td><span class="selo selo-controller">Controller</span></td>
+                    <td><code>MvcPaginasController</code></td>
+                    <td>Receber requisições HTTP, consultar o Model e selecionar a View.</td>
+                    <td><a th:href="@{/controller}">Camada Controller</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 2. CICLO DE VIDA -->
+    <section aria-labelledby="ciclo">
+        <h2 id="ciclo">2. Ciclo de vida da requisição HTTP</h2>
+        <p>O diagrama resume o fluxo de controle para uma requisição <code>GET /model</code>. Os quatro participantes
+            principais aparecem na ordem em que atuam; a resposta retorna ao cliente ao final do processamento.</p>
+
+        <ol class="fluxo" aria-label="Participantes do ciclo da requisição">
+            <li><span class="ator">Cliente</span><span class="detalhe">GET /model</span></li>
+            <li><span class="ator">Controller</span><span class="detalhe">@GetMapping("/model")</span></li>
+            <li><span class="ator">Model</span><span class="detalhe">List&lt;ConceitoMVC&gt;</span></li>
+            <li><span class="ator">View</span><span class="detalhe">templates/model.html</span></li>
+        </ol>
+
+        <h3>Etapas detalhadas</h3>
+        <p>Percorra o ciclo etapa por etapa, com os botões ou com as setas do teclado.</p>
+
+        <div class="etapas" id="etapas" role="group" aria-roledescription="carrossel"
+             aria-label="Etapas detalhadas do ciclo de vida da requisição">
+            <div class="etapas-progresso" aria-hidden="true"><span></span></div>
+
+            <ol class="etapas-lista">
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 1 de 8</p>
+                    <h4>Requisição HTTP GET <span class="selo selo-cliente">Cliente</span></h4>
+                    <p>O navegador emite <code>GET /model</code>, recebido pelo conector do servidor Tomcat embarcado.</p>
+<pre class="etapa-codigo" th:inline="none"><code>GET /model HTTP/1.1</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 2 de 8</p>
+                    <h4>Despacho pelo DispatcherServlet <span class="selo selo-controller">Controller</span></h4>
+                    <p>Implementação do padrão Front Controller: consulta o <em>HandlerMapping</em> e identifica o método
+                        anotado com <code>@GetMapping("/model")</code>.</p>
+<pre class="etapa-codigo" th:inline="none"><code>DispatcherServlet → HandlerMapping → paginaModel</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 3 de 8</p>
+                    <h4>Invocação do método do Controller <span class="selo selo-controller">Controller</span></h4>
+                    <p>O contêiner invoca <code>paginaModel(Model model)</code> na instância gerenciada pelo Spring.</p>
+<pre class="etapa-codigo" th:inline="none"><code>public String paginaModel(Model model) { ... }</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 4 de 8</p>
+                    <h4>Consulta ao estado <span class="selo selo-model">Model</span></h4>
+                    <p>A lista em memória é filtrada com a Stream API, produzindo o subconjunto de objetos a ser exibido.</p>
+<pre class="etapa-codigo" th:inline="none"><code>listaConceitos.stream().filter(...).collect(...)</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 5 de 8</p>
+                    <h4>Injeção de atributos <span class="selo selo-controller">Controller</span></h4>
+                    <p>A instrução <code>model.addAttribute("listaModel", apenasModel)</code> publica o resultado no escopo
+                        da requisição, tornando-o acessível ao template.</p>
+<pre class="etapa-codigo" th:inline="none"><code>model.addAttribute("listaModel", apenasModel);</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 6 de 8</p>
+                    <h4>Resolução da View <span class="selo selo-controller">Controller</span></h4>
+                    <p>O método retorna o nome lógico <code>"model"</code>; o <em>ViewResolver</em> o associa ao arquivo
+                        <code>templates/model.html</code>.</p>
+<pre class="etapa-codigo" th:inline="none"><code>return "model";   // → templates/model.html</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 7 de 8</p>
+                    <h4>Renderização no servidor <span class="selo selo-view">View</span></h4>
+                    <p>O Thymeleaf avalia <code>th:each</code> e <code>th:text</code> (Data Binding), substituindo as
+                        expressões pelos valores do Model e gerando HTML estático.</p>
+<pre class="etapa-codigo" th:inline="none"><code>&lt;div th:each="c : ${listaModel}"&gt; ... &lt;/div&gt;</code></pre>
+                </li>
+                <li class="etapa-cartao">
+                    <p class="etapa-num">Etapa 8 de 8</p>
+                    <h4>Resposta HTTP <span class="selo selo-cliente">Cliente</span></h4>
+                    <p>O servidor envia o documento com status <code>200 OK</code>; o navegador apenas interpreta o HTML recebido.</p>
+<pre class="etapa-codigo" th:inline="none"><code>HTTP/1.1 200 OK</code></pre>
+                </li>
+            </ol>
+
+            <div class="etapas-controles">
+                <button type="button" class="btn-etapa" id="etapa-anterior">← Anterior</button>
+                <ol class="etapas-pontos" id="etapa-pontos" aria-label="Ir para a etapa"></ol>
+                <button type="button" class="btn-etapa btn-etapa-primario" id="etapa-proxima">Próxima →</button>
+            </div>
+        </div>
+
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <p>Toda a composição do documento acontece antes do envio. Não há chamada assíncrona nem montagem de interface
+                no cliente: o resultado do <em>lifecycle</em> da requisição é uma página HTML completa.</p>
+        </div>
+    </section>
+
+    <!-- 3. ESTRUTURA -->
+    <section aria-labelledby="estrutura">
+        <h2 id="estrutura">3. Organização do projeto</h2>
+        <p>A estrutura de diretórios reflete a separação das camadas: o pacote <code>model</code>, o pacote
+            <code>controller</code> e o diretório de templates correspondem, respectivamente, ao M, ao C e ao V.</p>
+
+        <figure class="terminal">
+            <figcaption>estrutura do projeto</figcaption>
+<pre th:inline="none"><code>src/main/java/com/catalogo/mvc/
+├── model/
+│   └── ConceitoMVC.java
+└── controller/
+    └── MvcPaginasController.java
+
+src/main/resources/templates/
+├── fragments/layout.html
+├── inicio.html
+├── model.html
+├── view.html
+├── controller.html
+└── db.html</code></pre>
+        </figure>
+
+        <div class="callout callout-obs">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>O projeto adota MVC puro de forma deliberada: não há camada de serviço, repositório nem API REST.
+                Essa restrição isola o padrão como objeto de estudo, ao custo de concentrar no Controller o acesso aos dados.</p>
+        </div>
+    </section>
+
+    <!-- 4. QUESTÕES -->
+    <section aria-labelledby="questoes">
+        <h2 id="questoes">4. Questões de fixação</h2>
+
+        <details class="questao">
+            <summary>Por que o Controller não deve gerar HTML diretamente?</summary>
+            <div class="resposta"><p>Porque acoplaria o roteamento à apresentação, violando a separação de responsabilidades.
+                A mudança de layout exigiria alterar código Java, e o teste isolado de cada camada tornar-se-ia mais difícil.</p></div>
+        </details>
+        <details class="questao">
+            <summary>Em que sentido a aplicação implementa Server-Side Rendering?</summary>
+            <div class="resposta"><p>O HTML final é produzido no servidor pelo Thymeleaf a cada requisição, combinando o
+                template com os atributos do Model. O cliente recebe o documento pronto e não executa lógica de montagem.</p></div>
+        </details>
+        <details class="questao">
+            <summary>Qual é a função do método <code>addAttribute</code>?</summary>
+            <div class="resposta"><p>Registrar pares nome-valor no contêiner de atributos da requisição. É o mecanismo pelo
+                qual o Controller transfere dados à View, que os acessa por nome nas expressões <code>${...}</code>.</p></div>
+        </details>
+    </section>
+
+</main>
+
+<aside class="toc" aria-label="Nesta página">
+    <p class="toc-titulo">Nesta página</p>
+    <ul>
+        <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
+        <li><a href="#ciclo">2. Ciclo da requisição</a></li>
+        <li><a href="#estrutura">3. Organização do projeto</a></li>
+        <li><a href="#questoes">4. Questões de fixação</a></li>
+    </ul>
+</aside>
+</div>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

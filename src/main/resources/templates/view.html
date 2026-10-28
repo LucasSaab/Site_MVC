@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head-imports('View')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: cabecalho('view')}"></nav>
+
+<div class="doc">
+<main id="conteudo" class="artigo">
+
+    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>View</span></nav>
+
+    <header>
+        <h1>Camada View: Server-Side Rendering com Thymeleaf</h1>
+        <p class="lead">A View transforma os atributos recebidos do Controller em um documento HTML, sem buscar,
+            alterar ou decidir sobre os dados.</p>
+        <ul class="tags"><li class="selo selo-view">View</li><li class="selo">Server-Side Rendering</li><li class="selo">Data Binding</li></ul>
+    </header>
+
+    <div th:replace="~{fragments/layout :: diagrama('view')}"></div>
+
+    <section aria-labelledby="fundamentacao">
+        <h2 id="fundamentacao">1. Fundamentação teórica</h2>
+        <p>No Server-Side Rendering (SSR), o documento HTML é composto no servidor a cada requisição. O cliente recebe
+            marcação completa e a exibe diretamente, o que simplifica a camada de apresentação e favorece a
+            indexação e o tempo até o primeiro conteúdo visível.</p>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: Data Binding unidirecional</span>
+            <p>Neste projeto, os dados fluem em um único sentido, do Model para o template. O Thymeleaf avalia
+                expressões <code>${...}</code> contra os atributos da requisição e incorpora os resultados ao HTML.
+                Alterações no navegador não se propagam de volta ao Model.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="instancias">
+        <h2 id="instancias">2. Instâncias apresentadas</h2>
+        <p>Cada cartão resulta de uma iteração <code>th:each</code> sobre o atributo <code>listaView</code>.</p>
+
+        <div class="row g-3" th:unless="${#lists.isEmpty(listaView)}">
+            <div class="col-md-6 col-lg-4" th:each="c : ${listaView}">
+                <article class="cartao">
+                    <span class="selo selo-view" th:text="${c.componente}">View</span>
+                    <h3 th:text="${c.titulo}">Título</h3>
+                    <p th:text="${c.descricao}">Descrição</p>
+                    <p class="meta">Camada: <strong th:text="${c.camada}">Frontend</strong></p>
+                </article>
+            </div>
+        </div>
+
+        <div class="callout callout-obs" th:if="${#lists.isEmpty(listaView)}">
+            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <p>O atributo <code>listaView</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="renderizacao">
+        <h2 id="renderizacao">3. Do template ao documento final</h2>
+        <p>O arquivo-fonte contém atributos <code>th:*</code> e conteúdo de exemplo; o navegador recebe apenas HTML padrão.</p>
+
+        <div class="duas-colunas">
+            <figure class="terminal">
+                <figcaption>view.html (template)</figcaption>
+<pre th:inline="none"><code>&lt;div <span class="tk-a">th:each</span>="c : ${listaView}"&gt;
+  &lt;h3 <span class="tk-a">th:text</span>="${c.titulo}"&gt;
+    Título de exemplo
+  &lt;/h3&gt;
+  &lt;p <span class="tk-a">th:text</span>="${c.descricao}"&gt;
+    Descrição de exemplo
+  &lt;/p&gt;
+&lt;/div&gt;</code></pre>
+            </figure>
+            <figure class="terminal">
+                <figcaption>resposta HTTP (HTML gerado)</figcaption>
+<pre th:inline="none"><code>&lt;div&gt;
+  &lt;h3&gt;
+    Thymeleaf
+  &lt;/h3&gt;
+  &lt;p&gt;
+    Processa o HTML dinâmico
+    no servidor.
+  &lt;/p&gt;
+&lt;/div&gt;</code></pre>
+            </figure>
+        </div>
+
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <p>O ThymeleafViewResolver localiza o template pelo nome lógico retornado pelo Controller. O motor analisa o
+                arquivo, executa os processadores dos atributos <code>th:*</code> e serializa o resultado como HTML,
+                que é enviado na resposta.</p>
+        </div>
+
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">💡 Conceito Teórico: Natural Templates</span>
+            <p>O template permanece um HTML válido quando aberto diretamente no navegador, exibindo o conteúdo de exemplo.
+                Isso permite que o trabalho de design e o de programação ocorram sobre o mesmo artefato.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="diretivas">
+        <h2 id="diretivas">4. Atributos do Thymeleaf utilizados</h2>
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Atributo</th><th scope="col">Semântica</th><th scope="col">Ocorrência no projeto</th></tr></thead>
+                <tbody>
+                <tr><td><code>th:text</code></td><td>Substitui o conteúdo da tag pelo valor da expressão, com escape de caracteres HTML.</td><td>Título e descrição dos cartões.</td></tr>
+                <tr><td><code>th:each</code></td><td>Itera sobre uma coleção, replicando o elemento para cada item.</td><td>Cartões das camadas e linhas da tabela de dados.</td></tr>
+                <tr><td><code>th:replace</code></td><td>Substitui o elemento por um fragmento reutilizável.</td><td>Cabeçalho, rodapé e importações, definidos em <code>layout.html</code>.</td></tr>
+                <tr><td><code>th:if</code> / <code>th:unless</code></td><td>Renderiza o bloco condicionalmente.</td><td>Avisos de coleção vazia.</td></tr>
+                <tr><td><code>th:href</code></td><td>Resolve URLs relativas ao contexto da aplicação.</td><td>Links de navegação.</td></tr>
+                <tr><td><code>th:classappend</code></td><td>Acrescenta classes CSS conforme uma condição.</td><td>Destaque do item ativo no menu.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="callout callout-obs">
+            <span class="callout-titulo">⚠️ Observação Técnica: escape de saída</span>
+            <p>O atributo <code>th:text</code> escapa caracteres especiais, o que mitiga ataques de Cross-Site Scripting (XSS).
+                O atributo <code>th:utext</code> não realiza esse escape e deve ser evitado com dados de origem não confiável.</p>
+        </div>
+    </section>
+
+    <div class="proxima">
+        <a th:href="@{/model}">← Camada Model</a>
+        <a th:href="@{/controller}">Camada Controller →</a>
+    </div>
+
+</main>
+
+<aside class="toc" aria-label="Nesta página">
+    <p class="toc-titulo">Nesta página</p>
+    <ul>
+        <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
+        <li><a href="#instancias">2. Instâncias apresentadas</a></li>
+        <li><a href="#renderizacao">3. Do template ao documento</a></li>
+        <li><a href="#diretivas">4. Atributos do Thymeleaf</a></li>
+    </ul>
+</aside>
+</div>
+
+<footer th:replace="~{fragments/layout :: rodape}"></footer>
+</body>
+</html>

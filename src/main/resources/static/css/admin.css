@@ -1,0 +1,57 @@
+/* GestãoTI: estilo de dashboard corporativo */
+
+:root {
+  --navy: #0F2747;
+  --navy-claro: #1B3A66;
+  --fundo: #F3F5F9;
+  --borda: #DEE3ED;
+  --texto: #1E2A3B;
+
+  --cor-total: #2F5DA8;
+  --cor-planejado: #6B7686;
+  --cor-andamento: #0D6EFD;
+  --cor-concluido: #198754;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Navbar */
+.app-navbar { background: var(--navy); }
+.app-navbar .nav-link { border-radius: 6px; padding: .45rem .9rem; }
+.app-navbar .nav-link.active { background: var(--navy-claro); color: #fff; }
+
+/* Painéis (cards de conteúdo) */
+.painel { border: 1px solid var(--borda); border-radius: 12px; box-shadow: 0 1px 3px rgba(15, 39, 71, .06); overflow: hidden; }
+
+/* KPIs */
+.kpi {
+  display: flex; align-items: center; gap: 1rem; height: 100%;
+  padding: 1.1rem 1.25rem; background: #fff;
+  border: 1px solid var(--borda); border-left: 5px solid var(--kpi-cor, var(--cor-total));
+  border-radius: 12px; box-shadow: 0 1px 3px rgba(15, 39, 71, .06);
+}
+.kpi-icone {
+  flex: none; width: 3rem; height: 3rem; display: grid; place-items: center;
+  font-size: 1.5rem; color: var(--kpi-cor, var(--cor-total));
+  background: color-mix(in srgb, var(--kpi-cor, var(--cor-total)) 12%, white);
+  border-radius: 12px;
+}
+.kpi-valor { font-size: 2rem; font-weight: 700; line-height: 1; }
+.kpi-rotulo { color: #5B6678; font-size: .9rem; margin-top: .25rem; }
+.kpi-total     { --kpi-cor: var(--cor-total); }
+.kpi-planejado { --kpi-cor: var(--cor-planejado); }
+.kpi-andamento { --kpi-cor: var(--cor-andamento); }
+.kpi-concluido { --kpi-cor: var(--cor-concluido); }
+
+/* Tabela */
+.table > :not(caption) > * > * { padding: .85rem 1rem; }
+.table thead th { font-size: .85rem; color: #4A5568; font-weight: 600; }
+
+/* Rodapé */
+.app-footer { margin-top: 3rem; padding: 1.25rem 0; background: #fff; border-top: 1px solid var(--borda); color: #5B6678; font-size: .9rem; }
+
+:focus-visible { outline: 3px solid #86B7FE; outline-offset: 2px; }
