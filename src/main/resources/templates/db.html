@@ -8,7 +8,10 @@
 <div class="doc">
 <main id="conteudo" class="artigo">
 
-    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Dados em memória</span></nav>
+    <div class="trilha-linha">
+        <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Dados em memória</span></nav>
+        <nav class="vizinhas" aria-label="Páginas vizinhas"><a th:href="@{/controller}">← Controller</a><a th:href="@{/}">Visão geral →</a></nav>
+    </div>
 
     <header>
         <h1>Estado volátil em memória</h1>
@@ -59,7 +62,7 @@
         </div>
 
         <div class="callout callout-obs" th:if="${#lists.isEmpty(todosConceitos)}">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <span class="callout-titulo">Observação Técnica</span>
             <p>O atributo <code>todosConceitos</code> está vazio: a coleção em memória não possui registros.</p>
         </div>
     </section>
@@ -68,24 +71,96 @@
         <h2 id="limitacoes">2. Limitações da abordagem</h2>
 
         <div class="callout callout-obs">
-            <span class="callout-titulo">⚠️ Observação Técnica: volatilidade</span>
+            <span class="callout-titulo">Observação Técnica: volatilidade</span>
             <p>Os dados residem no heap da JVM. Ao reiniciar a aplicação, a coleção retorna ao estado definido no construtor
                 do Controller, pois não há persistência em disco.</p>
         </div>
 
         <div class="callout callout-servidor">
-            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
             <p>Como o Controller é um bean singleton, a mesma instância da lista é compartilhada por todas as requisições.
                 A coleção utilizada não é thread-safe, o que é aceitável para demonstração com acesso apenas de leitura,
                 mas inadequado quando há escrita concorrente.</p>
         </div>
 
-        <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: persistência e camadas de acesso a dados</span>
-            <p>Em sistemas de produção, o estado é delegado a um mecanismo de persistência, em geral com camadas
-                dedicadas de acesso a dados. Este projeto as omite deliberadamente para manter o foco na colaboração
-                entre Model, View e Controller.</p>
+    </section>
+
+    <section aria-labelledby="persistencia">
+        <details class="aprofundamento">
+            <summary>
+        <h2 id="persistencia">3. Evolução para persistência real: Spring Data JPA</h2>
+                <span class="selo">Aprofundamento</span>
+            </summary>
+            <div class="aprofundamento-corpo">
+        <p>A transição para uma persistência real substitui a lista em memória por um banco de dados relacional. Com o
+            Spring Data JPA, o Model passa a ser mapeado como entidade (<code>@Entity</code>) e o acesso aos dados é
+            delegado a uma interface de repositório, cuja implementação o framework gera em tempo de execução. A
+            adoção exige as dependências <code>spring-boot-starter-data-jpa</code> e um driver de banco, como H2 ou
+            PostgreSQL.</p>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Aspecto</th><th scope="col">Memória RAM (este projeto)</th><th scope="col">Spring Data JPA</th></tr></thead>
+                <tbody>
+                <tr><td>Armazenamento</td><td><code>List&lt;ConceitoMVC&gt;</code> no heap da JVM.</td><td>Tabela em um banco de dados relacional.</td></tr>
+                <tr><td>Acesso aos dados</td><td>Percurso da lista com a Stream API.</td><td>Métodos do repositório, como <code>findAll</code>, <code>findById</code>, <code>save</code> e <code>deleteById</code>.</td></tr>
+                <tr><td>Identificadores</td><td>Contador mantido manualmente no Controller.</td><td>Gerados pelo banco com <code>@GeneratedValue</code>.</td></tr>
+                <tr><td>Durabilidade</td><td>Perdida ao reiniciar a aplicação.</td><td>Mantida pelo banco de dados.</td></tr>
+                <tr><td>Concorrência</td><td>Coleção não thread-safe.</td><td>Transações e controle de concorrência do banco, com <code>@Transactional</code>.</td></tr>
+                </tbody>
+            </table>
         </div>
+        <figure class="terminal">
+            <figcaption>model/ConceitoMVC.java (entidade)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@Entity</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> ConceitoMVC {
+
+    <span class="tk-a">@Id</span>
+    <span class="tk-a">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="tk-k">private</span> Long id;
+
+    <span class="tk-k">private</span> <span class="tk-k">String</span> componente;
+    <span class="tk-k">private</span> <span class="tk-k">String</span> titulo;
+    <span class="tk-c">// demais atributos, construtor padrão e métodos de acesso</span>
+}</code></pre>
+        </figure>
+        <figure class="terminal">
+            <figcaption>repository/ConceitoRepository.java</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@Repository</span>
+<span class="tk-k">public</span> <span class="tk-k">interface</span> ConceitoRepository <span class="tk-k">extends</span> JpaRepository&lt;ConceitoMVC, Long&gt; {
+
+    List&lt;ConceitoMVC&gt; findByComponenteIgnoreCase(<span class="tk-k">String</span> componente);
+}</code></pre>
+        </figure>
+        <figure class="terminal">
+            <figcaption>controller/MvcPaginasController.java (usando o repositório)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@Controller</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> MvcPaginasController {
+
+    <span class="tk-k">private</span> <span class="tk-k">final</span> ConceitoRepository repositorio;
+
+    <span class="tk-c">// Injeção de dependência pelo construtor</span>
+    <span class="tk-k">public</span> MvcPaginasController(ConceitoRepository repositorio) {
+        this.repositorio = repositorio;
+    }
+
+    <span class="tk-a">@GetMapping</span>(<span class="tk-s">"/model"</span>)
+    <span class="tk-k">public</span> <span class="tk-k">String</span> paginaModel(Model model) {
+        model.addAttribute(<span class="tk-s">"listaModel"</span>, repositorio.findByComponenteIgnoreCase(<span class="tk-s">"Model"</span>));
+        <span class="tk-k">return</span> <span class="tk-s">"model"</span>;
+    }
+}</code></pre>
+        </figure>
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">Conceito Teórico: o papel do @Repository</span>
+            <p>A anotação <code>@Repository</code> marca a classe como componente da camada de persistência e habilita a tradução de exceções específicas do banco para a hierarquia <code>DataAccessException</code> do Spring. Em interfaces do Spring Data, ela é opcional: o framework as detecta pela herança de <code>JpaRepository</code>; mantê-la serve como marcação semântica da camada.</p>
+        </div>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica: fora do escopo do MVC puro</span>
+            <p>O repositório é uma camada adicional ao tripé Model, View e Controller. Este projeto a omite de propósito para isolar o padrão estudado. Em aplicações reais, costuma-se acrescentar também uma camada de serviço entre o Controller e o repositório, que concentra as regras de negócio e as transações.</p>
+        </div>
+            </div>
+        </details>
     </section>
 
     <div class="proxima">
@@ -100,6 +175,7 @@
     <ul>
         <li><a href="#registros">1. Registros armazenados</a></li>
         <li><a href="#limitacoes">2. Limitações da abordagem</a></li>
+        <li><a href="#persistencia">3. Persistência real (JPA)</a></li>
     </ul>
 </aside>
 </div>

@@ -8,7 +8,10 @@
 <div class="doc">
 <main id="conteudo" class="artigo">
 
-    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>View</span></nav>
+    <div class="trilha-linha">
+        <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>View</span></nav>
+        <nav class="vizinhas" aria-label="Páginas vizinhas"><a th:href="@{/model}">← Model</a><a th:href="@{/controller}">Controller →</a></nav>
+    </div>
 
     <header>
         <h1>Camada View: Server-Side Rendering com Thymeleaf</h1>
@@ -26,10 +29,8 @@
             indexação e o tempo até o primeiro conteúdo visível.</p>
 
         <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: Data Binding unidirecional</span>
-            <p>Neste projeto, os dados fluem em um único sentido, do Model para o template. O Thymeleaf avalia
-                expressões <code>${...}</code> contra os atributos da requisição e incorpora os resultados ao HTML.
-                Alterações no navegador não se propagam de volta ao Model.</p>
+            <span class="callout-titulo">Conceito Teórico: Data Binding</span>
+            <p>Na exibição, os dados fluem do Model para o template: o Thymeleaf avalia expressões <code>${...}</code> contra os atributos da requisição e incorpora os resultados ao HTML. Em formulários, <code>th:object</code> e <code>th:field</code> estabelecem o binding nos dois sentidos: ao renderizar, os valores do objeto preenchem os campos; ao submeter, o Spring converte os parâmetros da requisição e preenche novamente o objeto (<code>@ModelAttribute</code>).</p>
         </div>
     </section>
 
@@ -49,7 +50,7 @@
         </div>
 
         <div class="callout callout-obs" th:if="${#lists.isEmpty(listaView)}">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <span class="callout-titulo">Observação Técnica</span>
             <p>O atributo <code>listaView</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
         </div>
     </section>
@@ -85,14 +86,14 @@
         </div>
 
         <div class="callout callout-servidor">
-            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
             <p>O ThymeleafViewResolver localiza o template pelo nome lógico retornado pelo Controller. O motor analisa o
                 arquivo, executa os processadores dos atributos <code>th:*</code> e serializa o resultado como HTML,
                 que é enviado na resposta.</p>
         </div>
 
         <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: Natural Templates</span>
+            <span class="callout-titulo">Conceito Teórico: Natural Templates</span>
             <p>O template permanece um HTML válido quando aberto diretamente no navegador, exibindo o conteúdo de exemplo.
                 Isso permite que o trabalho de design e o de programação ocorram sobre o mesmo artefato.</p>
         </div>
@@ -115,10 +116,87 @@
         </div>
 
         <div class="callout callout-obs">
-            <span class="callout-titulo">⚠️ Observação Técnica: escape de saída</span>
+            <span class="callout-titulo">Observação Técnica: escape de saída</span>
             <p>O atributo <code>th:text</code> escapa caracteres especiais, o que mitiga ataques de Cross-Site Scripting (XSS).
                 O atributo <code>th:utext</code> não realiza esse escape e deve ser evitado com dados de origem não confiável.</p>
         </div>
+    </section>
+
+    <section aria-labelledby="formularios">
+        <details class="aprofundamento">
+            <summary>
+        <h2 id="formularios">5. Formulários: th:object, th:field e proteção CSRF</h2>
+                <span class="selo">Aprofundamento</span>
+            </summary>
+            <div class="aprofundamento-corpo">
+        <p>Formulários exigem uma associação explícita entre os campos HTML e um objeto do Model. O Thymeleaf a
+            estabelece com <code>th:object</code>, que define o objeto-alvo, e com <code>th:field</code>, que liga cada
+            campo a um atributo desse objeto por meio de expressões de seleção <code>*{...}</code>.</p>
+
+        <div class="duas-colunas">
+        <figure class="terminal">
+            <figcaption>form.html (template)</figcaption>
+<pre th:inline="none"><code>&lt;form th:object="${projeto}" method="post" th:action="@{/projetos/criar}"&gt;
+  &lt;input type="text" th:field="*{nome}"&gt;
+  &lt;select th:field="*{status}"&gt;
+    &lt;option th:each="s : ${statusOpcoes}"
+            th:value="${s}" th:text="${s}"&gt;Planejado&lt;/option&gt;
+  &lt;/select&gt;
+  &lt;button type="submit"&gt;Salvar&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+        </figure>
+        <figure class="terminal">
+            <figcaption>resposta HTTP (HTML gerado)</figcaption>
+<pre th:inline="none"><code>&lt;form method="post" action="/projetos/criar"&gt;
+  &lt;input type="hidden" name="_csrf" value="9f2c..."&gt;
+  &lt;!-- campo _csrf: apenas com Spring Security --&gt;
+  &lt;input type="text" id="nome" name="nome" value=""&gt;
+  &lt;select id="status" name="status"&gt;
+    &lt;option value="Planejado" selected="selected"&gt;Planejado&lt;/option&gt;
+    &lt;option value="Em andamento"&gt;Em andamento&lt;/option&gt;
+    &lt;option value="Concluído"&gt;Concluído&lt;/option&gt;
+  &lt;/select&gt;
+  &lt;button type="submit"&gt;Salvar&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+        </figure>
+        </div>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Elemento</th><th scope="col">Função</th></tr></thead>
+                <tbody>
+                <tr><td><code>th:object</code></td><td>Define o objeto do Model ao qual o formulário está vinculado, enviado pelo Controller, por exemplo com <code>model.addAttribute("projeto", new Projeto())</code>.</td></tr>
+                <tr><td><code>th:field</code></td><td>Gera <code>id</code>, <code>name</code> e <code>value</code> do campo a partir de um atributo do objeto e marca a opção selecionada em um <code>&lt;select&gt;</code>.</td></tr>
+                <tr><td><code>th:action</code></td><td>Resolve a URL de envio relativa ao contexto da aplicação e, com Spring Security, insere o token CSRF.</td></tr>
+                <tr><td><code>@ModelAttribute</code></td><td>No Controller, converte os parâmetros da requisição e preenche uma instância do Model (Data Binding no sentido View → Model).</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 id="csrf">5.1 Proteção contra CSRF</h3>
+        <p>O Cross-Site Request Forgery (CSRF) é um ataque em que um site malicioso induz o navegador autenticado do
+            usuário a enviar uma requisição que altera estado, como um POST de exclusão. A defesa usual é o token
+            sincronizador: o servidor emite um valor imprevisível (<code>_csrf</code>), incluído como campo oculto no
+            formulário e verificado a cada requisição de escrita. Com o Spring Security habilitado, o Thymeleaf
+            insere esse campo automaticamente nos formulários que usam <code>th:action</code> com método POST.</p>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica</span>
+            <p>O projeto didático não utiliza Spring Security e, portanto, não possui proteção CSRF. Em produção, ela é necessária em toda operação que altere estado (POST, PUT e DELETE).</p>
+        </div>
+            </div>
+        </details>
+    </section>
+
+    <section aria-labelledby="questoes">
+        <h2 id="questoes">6. Questões de fixação</h2>
+        <details class="questao">
+            <summary>Por que razões o Thymeleaf é considerado uma tecnologia de Natural Templates?</summary>
+            <div class="resposta"><p>Porque os atributos <code>th:*</code> são ignorados pelo navegador: o arquivo continua sendo HTML válido e exibe o conteúdo de exemplo quando aberto diretamente. Quando processado pelo servidor, esses atributos substituem o conteúdo de exemplo pelos dados reais, o que permite que design e programação trabalhem sobre o mesmo artefato.</p></div>
+        </details>
+        <details class="questao">
+            <summary>O que é CSRF e como o Thymeleaf contribui para a proteção?</summary>
+            <div class="resposta"><p>CSRF é um ataque em que um site malicioso induz o navegador do usuário a enviar uma requisição de escrita a outra aplicação. A defesa é o token sincronizador (<code>_csrf</code>). Com o Spring Security ativo, o Thymeleaf insere automaticamente o campo oculto com o token nos formulários POST que usam <code>th:action</code>.</p></div>
+        </details>
     </section>
 
     <div class="proxima">
@@ -135,6 +213,8 @@
         <li><a href="#instancias">2. Instâncias apresentadas</a></li>
         <li><a href="#renderizacao">3. Do template ao documento</a></li>
         <li><a href="#diretivas">4. Atributos do Thymeleaf</a></li>
+        <li><a href="#formularios">5. Formulários e CSRF</a></li>
+        <li><a href="#questoes">6. Questões de fixação</a></li>
     </ul>
 </aside>
 </div>

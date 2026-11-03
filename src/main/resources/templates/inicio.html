@@ -5,10 +5,13 @@
 
 <nav th:replace="~{fragments/layout :: cabecalho('inicio')}"></nav>
 
-<div class="doc">
+<div class="doc doc-largo">
 <main id="conteudo" class="artigo">
 
-    <nav class="trilha" aria-label="Localização"><span>Arquitetura MVC</span><span>Visão geral</span></nav>
+    <div class="trilha-linha">
+        <nav class="trilha" aria-label="Localização"><span>Arquitetura MVC</span><span>Visão geral</span></nav>
+        <nav class="vizinhas" aria-label="Páginas vizinhas"><a th:href="@{/model}">Model →</a></nav>
+    </div>
 
     <header>
         <h1>Model-View-Controller em aplicações web com Spring Boot</h1>
@@ -21,9 +24,9 @@
             <li class="selo">Bootstrap 5</li>
             <li class="selo">Server-Side Rendering</li>
         </ul>
-        <p class="estado">
-            <strong th:text="${totalConceitos}">3</strong>
-            <span>instâncias de <code>ConceitoMVC</code> mantidas em memória pelo Controller</span>
+        <p class="acoes-hero">
+            <a class="btn-acao" href="#ciclo">Começar pelo ciclo da requisição ↓</a>
+            <span class="estado-linha"><strong th:text="${totalConceitos}">3</strong> instâncias de <code>ConceitoMVC</code> mantidas em memória pelo Controller</span>
         </p>
     </header>
 
@@ -37,7 +40,7 @@
             expõe a outras apenas o contrato necessário para a colaboração.</p>
 
         <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: desacoplamento</span>
+            <span class="callout-titulo">Conceito Teórico: desacoplamento</span>
             <p>A divisão em camadas reduz a dependência mútua entre componentes. A View pode ser redesenhada sem
                 modificar a estrutura de dados, e a lógica de roteamento pode evoluir sem alterar o modelo de
                 apresentação. O custo é a necessidade de um mecanismo explícito de comunicação entre as camadas.</p>
@@ -70,6 +73,32 @@
                 </tbody>
             </table>
         </div>
+
+        <h3 id="mvc-web">1.1 MVC clássico e Web MVC (Spring)</h3>
+        <p>A formulação original do padrão, associada a aplicações desktop, pressupõe uma View persistente que observa
+            o Model e é notificada a cada alteração, segundo o padrão Observer. Na web, o protocolo HTTP é orientado a
+            requisição e resposta e não mantém estado entre chamadas: não existe um canal permanente pelo qual o Model
+            possa notificar a View. O Web MVC do Spring, também referido como arquitetura Model 2 na literatura de
+            Java EE, reorganiza a colaboração em torno do Controller.</p>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Aspecto</th><th scope="col">MVC clássico (desktop)</th><th scope="col">Web MVC (Spring)</th></tr></thead>
+                <tbody>
+                <tr><td>Notificação de mudanças</td><td>O Model notifica a View diretamente (padrão Observer).</td><td>Não há notificação: a View é produzida sob demanda a cada requisição.</td></tr>
+                <tr><td>Entrada do usuário</td><td>Eventos da interface gráfica, tratados pelo Controller.</td><td>Requisição HTTP (GET ou POST) recebida pelo <code>DispatcherServlet</code> e roteada ao Controller.</td></tr>
+                <tr><td>Ciclo de vida da View</td><td>Instância persistente, atualizada de forma incremental.</td><td>Efêmera: o HTML é gerado a cada requisição e descartado após a resposta.</td></tr>
+                <tr><td>Transporte dos dados</td><td>Referências a objetos no mesmo processo.</td><td>Atributos no contêiner <code>ui.Model</code> (escopo da requisição), serializados como HTML na resposta.</td></tr>
+                <tr><td>Estado entre interações</td><td>Mantido pela própria aplicação em execução.</td><td>Protocolo sem estado: manter estado exige sessão, cookies ou armazenamento externo.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p><strong>Observer versus requisição e resposta.</strong> No MVC clássico, o Model mantém uma lista de observadores e os notifica a cada mudança. No Web MVC, uma alteração do Model só chega à View quando uma nova requisição aciona o Controller e provoca nova renderização; para atualizações sem recarregar a página, recorre-se a chamadas assíncronas feitas por JavaScript.</p>
+        <p>O transporte de dados é mediado pelo Controller e pelo contêiner <code>org.springframework.ui.Model</code>: o Controller consulta o estado, publica atributos no escopo da requisição e o template os consome durante a renderização. Encerrada a resposta, esse contêiner é descartado.</p>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica: leitura do diagrama</span>
+            <p>O diagrama exibido abaixo do título de cada página adota a notação clássica, com setas de “Modelo alterado” entre Model e View. Elas representam relações conceituais: neste projeto nenhuma notificação ocorre diretamente entre as camadas, e toda comunicação é realizada pelo ciclo de requisição e resposta HTTP.</p>
+        </div>
     </section>
 
     <!-- 2. CICLO DE VIDA -->
@@ -85,77 +114,90 @@
             <li><span class="ator">View</span><span class="detalhe">templates/model.html</span></li>
         </ol>
 
-        <h3>Etapas detalhadas</h3>
-        <p>Percorra o ciclo etapa por etapa, com os botões ou com as setas do teclado.</p>
+        <h3>2.1 Etapas detalhadas</h3>
+        <p>O diagrama sintetiza as oito etapas do ciclo, na ordem em que ocorrem, e o participante responsável
+            por cada uma. A coluna escura de cada painel mostra o trecho de código ou a mensagem envolvida.</p>
 
-        <div class="etapas" id="etapas" role="group" aria-roledescription="carrossel"
-             aria-label="Etapas detalhadas do ciclo de vida da requisição">
-            <div class="etapas-progresso" aria-hidden="true"><span></span></div>
+        <div class="ciclo-bloco">
+            <!-- Ícones reutilizados pelos painéis -->
+            <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+                <defs>
+                    <symbol id="ico-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M8 20h8M12 16v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></symbol>
+                    <symbol id="ico-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></symbol>
+                    <symbol id="ico-file" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7zM14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></symbol>
+                </defs>
+            </svg>
 
-            <ol class="etapas-lista">
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 1 de 8</p>
-                    <h4>Requisição HTTP GET <span class="selo selo-cliente">Cliente</span></h4>
-                    <p>O navegador emite <code>GET /model</code>, recebido pelo conector do servidor Tomcat embarcado.</p>
-<pre class="etapa-codigo" th:inline="none"><code>GET /model HTTP/1.1</code></pre>
+            <ol class="ciclo-linha">
+                <li class="ciclo-painel ciclo-cliente">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">1</span>Requisição HTTP GET<span class="ciclo-ator">Cliente</span></span>
+                        <span class="ilu ilu-vertical"><svg class="ico" aria-hidden="true"><use href="#ico-monitor"></use></svg><span class="ilu-seta"><small>GET /model</small><span class="g">↓</span></span><span class="caixa">Tomcat<small>embarcado</small></span></span>
+                        <code class="ciclo-codigo">GET /model HTTP/1.1</code>
+                    </div>
                 </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 2 de 8</p>
-                    <h4>Despacho pelo DispatcherServlet <span class="selo selo-controller">Controller</span></h4>
-                    <p>Implementação do padrão Front Controller: consulta o <em>HandlerMapping</em> e identifica o método
-                        anotado com <code>@GetMapping("/model")</code>.</p>
-<pre class="etapa-codigo" th:inline="none"><code>DispatcherServlet → HandlerMapping → paginaModel</code></pre>
+                <li class="ciclo-painel ciclo-controller">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">2</span>Despacho pelo DispatcherServlet<span class="ciclo-ator">Controller</span></span>
+                        <span class="ilu ilu-vertical"><span class="caixa">DispatcherServlet<small>Front Controller</small></span><span class="ilu-seta"><small>consulta</small><span class="g">↓</span></span><span class="caixa">HandlerMapping</span></span>
+                        <code class="ciclo-codigo">@GetMapping("/model")</code>
+                    </div>
                 </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 3 de 8</p>
-                    <h4>Invocação do método do Controller <span class="selo selo-controller">Controller</span></h4>
-                    <p>O contêiner invoca <code>paginaModel(Model model)</code> na instância gerenciada pelo Spring.</p>
-<pre class="etapa-codigo" th:inline="none"><code>public String paginaModel(Model model) { ... }</code></pre>
+                <li class="ciclo-painel ciclo-controller">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">3</span>Invocação do método do Controller<span class="ciclo-ator">Controller</span></span>
+                        <span class="ilu ilu-vertical"><span class="caixa">Controller</span><span class="ilu-seta"><small>invoca</small><span class="g">↓</span></span><span class="caixa">paginaModel()</span></span>
+                        <code class="ciclo-codigo">paginaModel(Model&#8203; model)</code>
+                    </div>
                 </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 4 de 8</p>
-                    <h4>Consulta ao estado <span class="selo selo-model">Model</span></h4>
-                    <p>A lista em memória é filtrada com a Stream API, produzindo o subconjunto de objetos a ser exibido.</p>
-<pre class="etapa-codigo" th:inline="none"><code>listaConceitos.stream().filter(...).collect(...)</code></pre>
-                </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 5 de 8</p>
-                    <h4>Injeção de atributos <span class="selo selo-controller">Controller</span></h4>
-                    <p>A instrução <code>model.addAttribute("listaModel", apenasModel)</code> publica o resultado no escopo
-                        da requisição, tornando-o acessível ao template.</p>
-<pre class="etapa-codigo" th:inline="none"><code>model.addAttribute("listaModel", apenasModel);</code></pre>
-                </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 6 de 8</p>
-                    <h4>Resolução da View <span class="selo selo-controller">Controller</span></h4>
-                    <p>O método retorna o nome lógico <code>"model"</code>; o <em>ViewResolver</em> o associa ao arquivo
-                        <code>templates/model.html</code>.</p>
-<pre class="etapa-codigo" th:inline="none"><code>return "model";   // → templates/model.html</code></pre>
-                </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 7 de 8</p>
-                    <h4>Renderização no servidor <span class="selo selo-view">View</span></h4>
-                    <p>O Thymeleaf avalia <code>th:each</code> e <code>th:text</code> (Data Binding), substituindo as
-                        expressões pelos valores do Model e gerando HTML estático.</p>
-<pre class="etapa-codigo" th:inline="none"><code>&lt;div th:each="c : ${listaModel}"&gt; ... &lt;/div&gt;</code></pre>
-                </li>
-                <li class="etapa-cartao">
-                    <p class="etapa-num">Etapa 8 de 8</p>
-                    <h4>Resposta HTTP <span class="selo selo-cliente">Cliente</span></h4>
-                    <p>O servidor envia o documento com status <code>200 OK</code>; o navegador apenas interpreta o HTML recebido.</p>
-<pre class="etapa-codigo" th:inline="none"><code>HTTP/1.1 200 OK</code></pre>
+                <li class="ciclo-painel ciclo-model">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">4</span>Consulta ao estado<span class="ciclo-ator">Model</span></span>
+                        <span class="ilu ilu-vertical"><span class="chips"><span class="chip-ilu">Objeto</span><span class="chip-ilu">Objeto</span><span class="chip-ilu">Objeto</span><span class="chip-ilu">Objeto</span></span><span class="ilu-seta ilu-seta-icone"><svg class="ico" aria-hidden="true"><use href="#ico-filter"></use></svg><small>filter</small><span class="g">↓</span></span><span class="chip-ilu chip-ilu-forte">Objeto</span></span>
+                        <code class="ciclo-codigo">listaConceitos.stream()&#8203;.filter(...)</code>
+                    </div>
                 </li>
             </ol>
 
-            <div class="etapas-controles">
-                <button type="button" class="btn-etapa" id="etapa-anterior">← Anterior</button>
-                <ol class="etapas-pontos" id="etapa-pontos" aria-label="Ir para a etapa"></ol>
-                <button type="button" class="btn-etapa btn-etapa-primario" id="etapa-proxima">Próxima →</button>
+            <!-- Conector decorativo entre a etapa 4 e a etapa 5 -->
+            <div class="ciclo-volta" aria-hidden="true">
+                <svg viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M87.5 0 V20 H12.5 V40" vector-effect="non-scaling-stroke"></path></svg>
             </div>
+
+            <ol class="ciclo-linha" start="5">
+                <li class="ciclo-painel ciclo-controller">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">5</span>Injeção de atributos<span class="ciclo-ator">Controller</span></span>
+                        <span class="ilu ilu-vertical"><span class="caixa">apenasModel<small>resultado</small></span><span class="ilu-seta"><small>addAttribute</small><span class="g">↓</span></span><span class="caixa">Model<small>listaModel</small></span></span>
+                        <code class="ciclo-codigo">model.addAttribute(&#8203;"listaModel", apenasModel)</code>
+                    </div>
+                </li>
+                <li class="ciclo-painel ciclo-controller">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">6</span>Resolução da View<span class="ciclo-ator">Controller</span></span>
+                        <span class="ilu ilu-vertical"><span class="chip-ilu chip-ilu-forte">"model"</span><span class="ilu-seta"><small>view lógica</small><span class="g">↓</span></span><span class="caixa">templates/model.html</span></span>
+                        <code class="ciclo-codigo">return "model";</code>
+                    </div>
+                </li>
+                <li class="ciclo-painel ciclo-view">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">7</span>Renderização no servidor<span class="ciclo-ator">View</span></span>
+                        <span class="ilu ilu-vertical"><span class="caixa"><svg class="ico" aria-hidden="true"><use href="#ico-file"></use></svg>model.html<small>th:each · th:text</small></span><span class="ilu-seta"><span class="g">↓</span></span><span class="caixa">HTML<small>final</small></span></span>
+                        <span class="ciclo-codigo ciclo-texto">Gera o HTML final no servidor</span>
+                    </div>
+                </li>
+                <li class="ciclo-painel ciclo-cliente">
+                    <div class="ciclo-conteudo">
+                        <span class="ciclo-titulo"><span class="ciclo-n">8</span>Resposta HTTP<span class="ciclo-ator">Cliente</span></span>
+                        <span class="ilu ilu-vertical"><span class="caixa">Servidor</span><span class="ilu-seta"><small>200 OK</small><span class="g">↓</span></span><svg class="ico" aria-hidden="true"><use href="#ico-monitor"></use></svg></span>
+                        <code class="ciclo-codigo">HTTP/1.1 200 OK</code>
+                    </div>
+                </li>
+            </ol>
         </div>
 
         <div class="callout callout-servidor">
-            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
             <p>Toda a composição do documento acontece antes do envio. Não há chamada assíncrona nem montagem de interface
                 no cliente: o resultado do <em>lifecycle</em> da requisição é uma página HTML completa.</p>
         </div>
@@ -185,15 +227,42 @@ src/main/resources/templates/
         </figure>
 
         <div class="callout callout-obs">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <span class="callout-titulo">Observação Técnica</span>
             <p>O projeto adota MVC puro de forma deliberada: não há camada de serviço, repositório nem API REST.
                 Essa restrição isola o padrão como objeto de estudo, ao custo de concentrar no Controller o acesso aos dados.</p>
         </div>
     </section>
 
+    <!-- 4. DA TEORIA À PRÁTICA -->
+    <section aria-labelledby="pratica">
+        <h2 id="pratica">4. Da teoria à prática: CRUD de projetos</h2>
+        <p>As páginas deste estudo utilizam a entidade <code>ConceitoMVC</code> para explicar cada camada de forma
+            isolada. Concluída a compreensão teórica, a aplicação de gestão de projetos aplica os mesmos conceitos a
+            um caso completo de operações CRUD sobre a entidade <code>Projeto</code>: o mesmo encadeamento Controller,
+            Model e View, agora com formulários, submissão de dados por POST e redirecionamento.</p>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Operação</th><th scope="col">Rotas HTTP</th><th scope="col">Responsabilidade do Controller</th><th scope="col">View</th></tr></thead>
+                <tbody>
+                <tr><td>Listar</td><td><code>GET /projetos</code></td><td>Injetar a lista e os indicadores no <code>ui.Model</code>.</td><td><code>projetos/lista.html</code></td></tr>
+                <tr><td>Criar</td><td><code>GET /projetos/novo</code><br><code>POST /projetos/criar</code></td><td>Exibir o formulário vazio; receber o objeto preenchido e adicioná-lo à lista.</td><td><code>projetos/form.html</code></td></tr>
+                <tr><td>Editar</td><td><code>GET /projetos/{id}/editar</code><br><code>POST /projetos/{id}/atualizar</code></td><td>Exibir o formulário preenchido; copiar os dados recebidos para o registro existente.</td><td><code>projetos/form.html</code></td></tr>
+                <tr><td>Excluir</td><td><code>POST /projetos/{id}/excluir</code></td><td>Remover o registro e redirecionar para a listagem.</td><td>Redirecionamento para <code>projetos/lista.html</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">Conceito Teórico: analogia entre as entidades</span>
+            <p><code>ConceitoMVC</code> e <code>Projeto</code> desempenham o mesmo papel arquitetural: ambos são POJOs da camada Model. O que muda é a riqueza da interação, que passa de leitura (GET) para leitura e escrita (GET e POST), tema detalhado na página do <a th:href="@{/controller}">Controller</a>.</p>
+        </div>
+
+        <p><a class="btn-acao" th:href="@{/projetos}">Abrir o módulo de projetos →</a></p>
+    </section>
+
     <!-- 4. QUESTÕES -->
     <section aria-labelledby="questoes">
-        <h2 id="questoes">4. Questões de fixação</h2>
+        <h2 id="questoes">5. Questões de fixação</h2>
 
         <details class="questao">
             <summary>Por que o Controller não deve gerar HTML diretamente?</summary>
@@ -210,7 +279,15 @@ src/main/resources/templates/
             <div class="resposta"><p>Registrar pares nome-valor no contêiner de atributos da requisição. É o mecanismo pelo
                 qual o Controller transfere dados à View, que os acessa por nome nas expressões <code>${...}</code>.</p></div>
         </details>
+        <details class="questao">
+            <summary>Qual é a principal diferença entre o MVC clássico e o Web MVC do Spring?</summary>
+            <div class="resposta"><p>No MVC clássico o Model notifica a View diretamente (Observer). No Web MVC não há notificação: a View é regenerada a cada requisição HTTP, e os dados chegam a ela por atributos injetados pelo Controller no <code>ui.Model</code>.</p></div>
+        </details>
     </section>
+
+    <div class="proxima">
+        <a th:href="@{/model}">Camada Model →</a>
+    </div>
 
 </main>
 
@@ -218,9 +295,11 @@ src/main/resources/templates/
     <p class="toc-titulo">Nesta página</p>
     <ul>
         <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
+        <li><a href="#mvc-web">1.1 MVC clássico e Web MVC</a></li>
         <li><a href="#ciclo">2. Ciclo da requisição</a></li>
         <li><a href="#estrutura">3. Organização do projeto</a></li>
-        <li><a href="#questoes">4. Questões de fixação</a></li>
+        <li><a href="#pratica">4. Da teoria à prática</a></li>
+        <li><a href="#questoes">5. Questões de fixação</a></li>
     </ul>
 </aside>
 </div>

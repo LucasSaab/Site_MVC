@@ -1,71 +1,126 @@
 (function () {
   'use strict';
 
+  var CHAVE_MODO = 'mvc-modo-apresentacao';
+
   /* =====================================================
-     1. Etapas do ciclo da requisição (inicio.html)
-     Melhoria progressiva: sem JavaScript, os cartões
-     aparecem todos em sequência.
+     1. Modo apresentação (fonte maior e contraste reforçado)
+     A classe também é aplicada no <head> para evitar "piscar".
      ===================================================== */
-  var container = document.getElementById('etapas');
-  if (container) {
-    var cartoes = container.querySelectorAll('.etapa-cartao');
-    var lista = container.querySelector('.etapas-lista');
-    var barra = container.querySelector('.etapas-progresso span');
-    var anterior = document.getElementById('etapa-anterior');
-    var proxima = document.getElementById('etapa-proxima');
-    var pontos = document.getElementById('etapa-pontos');
-    var total = cartoes.length;
-    var atual = 0;
-    var botoesPonto = [];
-
-    container.classList.add('etapas-ativo');
-    lista.setAttribute('aria-live', 'polite');
-
-    // Indicadores numerados (1 a N)
-    cartoes.forEach(function (_, i) {
-      var item = document.createElement('li');
-      var botao = document.createElement('button');
-      botao.type = 'button';
-      botao.className = 'ponto';
-      botao.textContent = String(i + 1);
-      botao.setAttribute('aria-label', 'Etapa ' + (i + 1) + ' de ' + total);
-      botao.addEventListener('click', function () { irPara(i); });
-      item.appendChild(botao);
-      pontos.appendChild(item);
-      botoesPonto.push(botao);
-    });
-
-    var irPara = function (i) {
-      atual = Math.max(0, Math.min(total - 1, i));
-
-      cartoes.forEach(function (cartao, idx) { cartao.hidden = idx !== atual; });
-
-      botoesPonto.forEach(function (botao, idx) {
-        botao.classList.toggle('feito', idx < atual);
-        if (idx === atual) { botao.setAttribute('aria-current', 'step'); }
-        else { botao.removeAttribute('aria-current'); }
-      });
-
-      barra.style.width = ((atual + 1) / total * 100) + '%';
-      anterior.disabled = atual === 0;
-      proxima.disabled = atual === total - 1;
-      proxima.textContent = atual === total - 1 ? 'Ciclo concluído' : 'Próxima →';
+  var botaoModo = document.getElementById('modo-apresentacao');
+  if (botaoModo) {
+    var raiz = document.documentElement;
+    var sincronizarModo = function () {
+      botaoModo.setAttribute('aria-pressed', raiz.classList.contains('modo-apresentacao') ? 'true' : 'false');
     };
-
-    anterior.addEventListener('click', function () { irPara(atual - 1); });
-    proxima.addEventListener('click', function () { irPara(atual + 1); });
-
-    // Navegação por teclado dentro do container
-    container.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight') { irPara(atual + 1); e.preventDefault(); }
-      if (e.key === 'ArrowLeft') { irPara(atual - 1); e.preventDefault(); }
+    sincronizarModo();
+    botaoModo.addEventListener('click', function () {
+      var ligado = raiz.classList.toggle('modo-apresentacao');
+      try { localStorage.setItem(CHAVE_MODO, ligado ? '1' : '0'); } catch (e) { /* armazenamento indisponível */ }
+      sincronizarModo();
     });
-
-    irPara(0);
   }
 
   /* =====================================================
-     2. Filtro por componente (db.html)
+     2. Botão "Copiar" nos blocos de código (terminal)
+     ===================================================== */
+  var copiarTexto = function (texto) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(texto);
+    }
+    return new Promise(function (resolve, reject) {
+      var area = document.createElement('textarea');
+      area.value = texto;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(area);
+      if (ok) { resolve(); } else { reject(new Error('cópia não suportada')); }
+    });
+  };
+
+  document.querySelectorAll('.terminal').forEach(function (figura) {
+    var legenda = figura.querySelector('figcaption');
+    var pre = figura.querySelector('pre');
+    if (!legenda || !pre) { return; }
+
+    var botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'copiar';
+    botao.textContent = 'Copiar';
+    botao.setAttribute('aria-label', 'Copiar o código de ' + legenda.textContent.trim());
+    legenda.appendChild(botao);
+
+    botao.addEventListener('click', function () {
+      var texto = pre.textContent.replace(/\u200b/g, '');
+      copiarTexto(texto).then(function () {
+        botao.textContent = 'Copiado';
+      }, function () {
+        botao.textContent = 'Falhou';
+      }).then(function () {
+        setTimeout(function () { botao.textContent = 'Copiar'; }, 1600);
+      });
+    });
+  });
+
+  /* =====================================================
+     3. Índice lateral: destaca a seção que está na tela
+     ===================================================== */
+  var linksIndice = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  if (linksIndice.length) {
+    var alvos = linksIndice.map(function (link) {
+      return document.getElementById(decodeURIComponent(link.getAttribute('href').slice(1)));
+    });
+    var agendado = false;
+
+    var atualizarIndice = function () {
+      agendado = false;
+      var atual = 0;
+      alvos.forEach(function (alvo, i) {
+        if (alvo && alvo.getBoundingClientRect().top <= 140) { atual = i; }
+      });
+      // No fim da página, a última seção pode não alcançar o limite
+      var noFim = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      if (noFim && window.scrollY > 0) { atual = linksIndice.length - 1; }
+
+      linksIndice.forEach(function (link, i) {
+        if (i === atual) { link.setAttribute('aria-current', 'true'); }
+        else { link.removeAttribute('aria-current'); }
+      });
+    };
+    var agendar = function () {
+      if (agendado) { return; }
+      agendado = true;
+      (window.requestAnimationFrame || window.setTimeout)(atualizarIndice);
+    };
+
+    window.addEventListener('scroll', agendar, { passive: true });
+    window.addEventListener('resize', agendar);
+    atualizarIndice();
+  }
+
+  /* =====================================================
+     4. Seções de aprofundamento: abrem ao navegar até elas
+     ===================================================== */
+  var abrirSecaoDoAlvo = function (hash) {
+    if (!hash || hash.length < 2) { return; }
+    var alvo = document.getElementById(decodeURIComponent(hash.slice(1)));
+    var secao = alvo && alvo.closest ? alvo.closest('details') : null;
+    if (secao && !secao.open) { secao.open = true; }
+  };
+  document.addEventListener('click', function (evento) {
+    var link = evento.target.closest ? evento.target.closest('a[href^="#"]') : null;
+    if (link) { abrirSecaoDoAlvo(link.getAttribute('href')); }
+  });
+  window.addEventListener('hashchange', function () { abrirSecaoDoAlvo(window.location.hash); });
+  abrirSecaoDoAlvo(window.location.hash);
+
+  /* =====================================================
+     5. Filtro por componente (db.html)
      ===================================================== */
   var filtros = document.querySelectorAll('.filtro[data-filtro]');
   if (filtros.length) {

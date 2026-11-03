@@ -8,7 +8,10 @@
 <div class="doc">
 <main id="conteudo" class="artigo">
 
-    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Model</span></nav>
+    <div class="trilha-linha">
+        <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Model</span></nav>
+        <nav class="vizinhas" aria-label="Páginas vizinhas"><a th:href="@{/}">← Visão geral</a><a th:href="@{/view}">View →</a></nav>
+    </div>
 
     <header>
         <h1>Camada Model: representação do domínio</h1>
@@ -25,7 +28,7 @@
             Controller, o que permite reutilizá-lo em outros contextos de apresentação.</p>
 
         <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: independência da apresentação</span>
+            <span class="callout-titulo">Conceito Teórico: independência da apresentação</span>
             <p>Uma classe de Model não deve importar tipos de HTML, de template ou de transporte HTTP. A dependência flui
                 sempre no sentido Controller → Model e View → Model, nunca no inverso.</p>
         </div>
@@ -48,12 +51,12 @@
         </div>
 
         <div class="callout callout-obs" th:if="${#lists.isEmpty(listaModel)}">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <span class="callout-titulo">Observação Técnica</span>
             <p>O atributo <code>listaModel</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
         </div>
 
         <div class="callout callout-servidor">
-            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
             <p>O Controller aplica <code>stream().filter(...)</code> sobre a lista mantida em memória e injeta o
                 subconjunto resultante no escopo da requisição com <code>addAttribute</code>. O template apenas itera
                 sobre esse atributo.</p>
@@ -104,11 +107,116 @@
             </table>
         </div>
 
-        <div class="callout callout-obs">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
-            <p>A classe é um modelo de domínio anêmico (<em>anemic domain model</em>): possui estado, mas nenhum
-                comportamento. A escolha é adequada ao escopo didático, embora modelos mais ricos incorporem regras de negócio.</p>
+        <h3 id="anemico">3.1 Modelo anêmico e modelo rico</h3>
+        <p>A classe <code>ConceitoMVC</code> é um modelo de domínio anêmico (<em>anemic domain model</em>): possui estado
+            e métodos de acesso, mas nenhum comportamento. A alternativa é o modelo rico, em que o objeto também
+            encapsula as regras de negócio que lhe dizem respeito.</p>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Aspecto</th><th scope="col">Modelo anêmico</th><th scope="col">Modelo rico</th></tr></thead>
+                <tbody>
+                <tr><td>Conteúdo da classe</td><td>Estado e métodos de acesso.</td><td>Estado, métodos de acesso e comportamento.</td></tr>
+                <tr><td>Regras de negócio</td><td>Ficam fora do objeto, no Controller ou em outras camadas.</td><td>Encapsuladas no próprio objeto.</td></tr>
+                <tr><td>Invariantes</td><td>Não são garantidas pela classe.</td><td>Garantidas pelos métodos de negócio.</td></tr>
+                <tr><td>Adequação</td><td>CRUD simples e fins didáticos, como neste projeto.</td><td>Domínios com regras complexas e transições de estado.</td></tr>
+                </tbody>
+            </table>
         </div>
+        <figure class="terminal">
+            <figcaption>exemplo ilustrativo: modelo rico</figcaption>
+<pre th:inline="none"><code><span class="tk-c">// Exemplo ilustrativo de modelo rico</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> Projeto {
+
+    <span class="tk-k">private</span> <span class="tk-k">String</span> status = <span class="tk-s">"Planejado"</span>;
+
+    <span class="tk-k">public</span> <span class="tk-k">void</span> concluir() {
+        <span class="tk-k">if</span> (!<span class="tk-s">"Em andamento"</span>.equals(status)) {
+            <span class="tk-k">throw</span> <span class="tk-k">new</span> IllegalStateException(<span class="tk-s">"Somente projetos em andamento podem ser concluídos"</span>);
+        }
+        this.status = <span class="tk-s">"Concluído"</span>;
+    }
+}</code></pre>
+        </figure>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica</span>
+            <p>O modelo rico é preferível quando há regras que dependem do estado do objeto, como transições válidas de status ou limites de valores: concentrá-las na classe evita duplicação e impede estados inconsistentes. Para um catálogo de leitura, como este, o modelo anêmico é suficiente e mantém o foco no padrão arquitetural.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="validacao">
+        <details class="aprofundamento">
+            <summary>
+        <h2 id="validacao">4. Integridade dos dados: Bean Validation</h2>
+                <span class="selo">Aprofundamento</span>
+            </summary>
+            <div class="aprofundamento-corpo">
+        <p>O Bean Validation (especificação Jakarta Validation, implementada pelo Hibernate Validator) permite declarar
+            restrições de integridade diretamente nos atributos do Model, por meio de anotações. No Spring Boot, a
+            dependência <code>spring-boot-starter-validation</code> habilita o mecanismo; a verificação é disparada
+            por <code>@Valid</code> no parâmetro do Controller e o resultado é coletado em <code>BindingResult</code>.</p>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Anotação</th><th scope="col">Restrição</th><th scope="col">Aplicação típica</th></tr></thead>
+                <tbody>
+                <tr><td><code>@NotNull</code></td><td>O valor não pode ser nulo.</td><td>Identificadores e referências obrigatórias.</td></tr>
+                <tr><td><code>@NotBlank</code></td><td>O texto não pode ser nulo nem conter apenas espaços.</td><td>Nome, título e descrição.</td></tr>
+                <tr><td><code>@Size</code></td><td>Limita o comprimento de um texto ou de uma coleção.</td><td>Título com no máximo 80 caracteres.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <figure class="terminal">
+            <figcaption>model/ConceitoMVC.java (com restrições)</figcaption>
+<pre th:inline="none"><code>import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+<span class="tk-k">public</span> <span class="tk-k">class</span> ConceitoMVC {
+
+    <span class="tk-a">@NotNull</span>
+    <span class="tk-k">private</span> Integer id;
+
+    <span class="tk-a">@NotBlank</span>(message = <span class="tk-s">"O título é obrigatório"</span>)
+    <span class="tk-a">@Size</span>(max = 80, message = <span class="tk-s">"O título deve ter no máximo 80 caracteres"</span>)
+    <span class="tk-k">private</span> <span class="tk-k">String</span> titulo;
+
+    <span class="tk-c">// demais atributos e métodos de acesso</span>
+}</code></pre>
+        </figure>
+        <figure class="terminal">
+            <figcaption>controller (disparo da validação)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@PostMapping</span>(<span class="tk-s">"/conceitos"</span>)
+<span class="tk-k">public</span> <span class="tk-k">String</span> salvar(<span class="tk-a">@Valid</span> <span class="tk-a">@ModelAttribute</span> ConceitoMVC conceito, BindingResult resultado) {
+    <span class="tk-k">if</span> (resultado.hasErrors()) {
+        <span class="tk-k">return</span> <span class="tk-s">"form"</span>;                 <span class="tk-c">// reexibe o formulário com as mensagens de erro</span>
+    }
+    listaConceitos.add(conceito);
+    <span class="tk-k">return</span> <span class="tk-s">"redirect:/db"</span>;
+}</code></pre>
+        </figure>
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">Conceito Teórico: integridade antes da persistência</span>
+            <p>As restrições declaradas no Model funcionam como invariantes do domínio: dados inválidos são rejeitados antes de alcançarem a camada de persistência. Em aplicações com JPA, o Hibernate Validator também verifica as restrições imediatamente antes da gravação.</p>
+        </div>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica</span>
+            <p>Este projeto omite a validação de forma deliberada, sem <code>@Valid</code> nem <code>BindingResult</code>, para manter o foco no padrão MVC. As anotações não alteram a estrutura do POJO: apenas o enriquecem com metadados.</p>
+        </div>
+            </div>
+        </details>
+    </section>
+
+    <section aria-labelledby="questoes">
+        <h2 id="questoes">5. Questões de fixação</h2>
+        <details class="questao">
+            <summary>Qual é a diferença entre a classe <code>ConceitoMVC</code> e o parâmetro <code>Model model</code> recebido no Controller?</summary>
+            <div class="resposta"><p><code>ConceitoMVC</code> é um objeto de domínio, pertencente à camada Model, que representa os dados da aplicação. O parâmetro <code>Model</code>, do pacote <code>org.springframework.ui</code>, é um contêiner de atributos do escopo da requisição, usado pelo Controller para entregar dados à View. Ele pode transportar instâncias de <code>ConceitoMVC</code>, mas não é uma entidade de domínio.</p></div>
+        </details>
+        <details class="questao">
+            <summary>Em que cenário um modelo rico é preferível a um modelo anêmico?</summary>
+            <div class="resposta"><p>Quando o domínio possui regras e invariantes que dependem do estado do objeto, como transições válidas de status. Encapsular esse comportamento na própria classe evita duplicação e impede estados inconsistentes. Em um CRUD simples, o modelo anêmico é suficiente.</p></div>
+        </details>
     </section>
 
     <div class="proxima">
@@ -124,6 +232,9 @@
         <li><a href="#fundamentacao">1. Fundamentação teórica</a></li>
         <li><a href="#instancias">2. Instâncias recuperadas</a></li>
         <li><a href="#pojo">3. Anatomia do POJO</a></li>
+        <li><a href="#anemico">3.1 Modelo anêmico e rico</a></li>
+        <li><a href="#validacao">4. Bean Validation</a></li>
+        <li><a href="#questoes">5. Questões de fixação</a></li>
     </ul>
 </aside>
 </div>

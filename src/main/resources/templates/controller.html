@@ -8,7 +8,10 @@
 <div class="doc">
 <main id="conteudo" class="artigo">
 
-    <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Controller</span></nav>
+    <div class="trilha-linha">
+        <nav class="trilha" aria-label="Localização"><a th:href="@{/}">Arquitetura MVC</a><span>Controller</span></nav>
+        <nav class="vizinhas" aria-label="Páginas vizinhas"><a th:href="@{/view}">← View</a><a th:href="@{/db}">Dados em memória →</a></nav>
+    </div>
 
     <header>
         <h1>Camada Controller: mediação e roteamento</h1>
@@ -26,7 +29,7 @@
             com <code>@Controller</code>, responsáveis pelo tratamento de cada rota.</p>
 
         <div class="callout callout-conceito">
-            <span class="callout-titulo">💡 Conceito Teórico: Inversão de Controle</span>
+            <span class="callout-titulo">Conceito Teórico: Inversão de Controle</span>
             <p>A instância de <code>MvcPaginasController</code> não é criada pelo código da aplicação, e sim pelo contêiner
                 do Spring, que também decide quando seus métodos serão invocados. O desenvolvedor declara o mapeamento por
                 anotações e delega o fluxo de execução ao framework.</p>
@@ -49,7 +52,7 @@
         </div>
 
         <div class="callout callout-obs" th:if="${#lists.isEmpty(listaController)}">
-            <span class="callout-titulo">⚠️ Observação Técnica</span>
+            <span class="callout-titulo">Observação Técnica</span>
             <p>O atributo <code>listaController</code> está vazio: nenhum registro satisfez o filtro aplicado no Controller.</p>
         </div>
     </section>
@@ -75,7 +78,7 @@
         </figure>
 
         <div class="callout callout-obs">
-            <span class="callout-titulo">⚠️ Observação Técnica: dois sentidos para “Model”</span>
+            <span class="callout-titulo">Observação Técnica: dois sentidos para “Model”</span>
             <p>A camada Model é o domínio de dados (<code>ConceitoMVC</code>). O parâmetro <code>Model model</code>, do pacote
                 <code>org.springframework.ui</code>, é apenas o contêiner de atributos que transporta informações do
                 Controller até a View durante a requisição. Os nomes coincidem, mas os papéis são distintos.</p>
@@ -100,11 +103,152 @@
         </div>
 
         <div class="callout callout-servidor">
-            <span class="callout-titulo">🔍 O que ocorre no Servidor?</span>
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
             <p>Durante a inicialização, o Spring instancia o Controller uma única vez (escopo <em>singleton</em>) e registra
                 suas rotas no <em>HandlerMapping</em>. A cada requisição, o <code>DispatcherServlet</code> consulta esse
                 registro e invoca o método correspondente.</p>
         </div>
+    </section>
+
+    <section aria-labelledby="post">
+        <h2 id="post">5. Submissões POST e o padrão Post/Redirect/Get</h2>
+        <p>Além de responder a consultas com <code>@GetMapping</code>, o Controller trata submissões de formulário com
+            <code>@PostMapping</code>. O parâmetro anotado com <code>@ModelAttribute</code> recebe os dados enviados: o
+            Spring instancia o objeto, converte os parâmetros da requisição pelo nome e invoca os métodos de escrita
+            correspondentes (Data Binding no sentido View → Model).</p>
+
+        <figure class="terminal">
+            <figcaption>controller (tratamento de POST)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@PostMapping</span>(<span class="tk-s">"/projetos/criar"</span>)
+<span class="tk-k">public</span> <span class="tk-k">String</span> criar(<span class="tk-a">@ModelAttribute</span> Projeto projeto, RedirectAttributes redirect) {
+    projeto.setId(proximoId++);
+    projetos.add(projeto);
+    redirect.addFlashAttribute(<span class="tk-s">"mensagem"</span>, <span class="tk-s">"Projeto criado com sucesso!"</span>);
+    <span class="tk-k">return</span> <span class="tk-s">"redirect:/projetos"</span>;     <span class="tk-c">// PRG: responde com redirecionamento para um GET</span>
+}</code></pre>
+        </figure>
+
+        <p>Ao concluir o processamento, o método não devolve uma View: devolve <code>"redirect:/projetos"</code>. Esse
+            é o padrão Post/Redirect/Get (PRG), cuja sequência é:</p>
+        <ol class="passos">
+            <li>O navegador envia o formulário com <code>POST /projetos/criar</code>.</li>
+            <li>O Controller processa o envio e altera o estado da aplicação.</li>
+            <li>O servidor responde com um redirecionamento (status 302 ou 303) para <code>GET /projetos</code>.</li>
+            <li>O navegador emite o GET e recebe o HTML atualizado (<code>200 OK</code>).</li>
+        </ol>
+        <div class="callout callout-conceito">
+            <span class="callout-titulo">Conceito Teórico: por que redirecionar?</span>
+            <p>Se o POST respondesse diretamente com HTML, atualizar a página reenviaria o formulário e duplicaria o registro. Com o PRG, a última requisição do histórico é um GET, seguro e idempotente, que pode ser repetido sem efeitos colaterais. Os <em>flash attributes</em> (<code>addFlashAttribute</code>) preservam a mensagem de confirmação apenas durante esse redirecionamento.</p>
+        </div>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica: aplicação prática</span>
+            <p>O módulo de gestão de projetos, apresentado em “Da teoria à prática” na <a th:href="@{/#pratica}">página inicial</a>, aplica esse padrão nas rotas <code>/projetos/criar</code>, <code>/projetos/{id}/atualizar</code> e <code>/projetos/{id}/excluir</code>.</p>
+        </div>
+    </section>
+
+    <section aria-labelledby="rest">
+        <details class="aprofundamento">
+            <summary>
+        <h2 id="rest">6. @Controller e @RestController</h2>
+                <span class="selo">Aprofundamento</span>
+            </summary>
+            <div class="aprofundamento-corpo">
+        <p>A anotação <code>@Controller</code> declara um controlador tradicional, cujo método devolve o nome de uma View
+            para renderização no servidor. A anotação <code>@RestController</code> declara um controlador de API:
+            o valor retornado é escrito diretamente no corpo da resposta, em geral como JSON.</p>
+
+        <div class="duas-colunas">
+        <figure class="terminal">
+            <figcaption>@Controller (renderização no servidor)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@Controller</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> ConceitoPaginaController {
+
+    <span class="tk-a">@GetMapping</span>(<span class="tk-s">"/model"</span>)
+    <span class="tk-k">public</span> <span class="tk-k">String</span> paginaModel(Model model) {
+        model.addAttribute(<span class="tk-s">"listaModel"</span>, lista);
+        <span class="tk-k">return</span> <span class="tk-s">"model"</span>;              <span class="tk-c">// nome da View (HTML)</span>
+    }
+}</code></pre>
+        </figure>
+        <figure class="terminal">
+            <figcaption>@RestController (API REST)</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@RestController</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> ConceitoApiController {
+
+    <span class="tk-a">@GetMapping</span>(<span class="tk-s">"/api/conceitos"</span>)
+    <span class="tk-k">public</span> List&lt;ConceitoMVC&gt; listar() {
+        <span class="tk-k">return</span> lista;                <span class="tk-c">// serializado em JSON</span>
+    }
+}</code></pre>
+        </figure>
+        </div>
+
+        <div class="tabela-wrap">
+            <table class="tabela">
+                <thead><tr><th scope="col">Aspecto</th><th scope="col">@Controller</th><th scope="col">@RestController</th></tr></thead>
+                <tbody>
+                <tr><td>Retorno do método</td><td>Nome lógico da View (<code>String</code>), resolvido pelo <em>ViewResolver</em>.</td><td>Objeto serializado diretamente no corpo da resposta.</td></tr>
+                <tr><td>Formato da resposta</td><td>HTML (<code>text/html</code>) gerado no servidor.</td><td>Em geral JSON (<code>application/json</code>), por meio de um <em>HttpMessageConverter</em>.</td></tr>
+                <tr><td>Consumidor</td><td>Navegador, que exibe a página.</td><td>Clientes de API: aplicações de página única, aplicativos móveis e outros sistemas.</td></tr>
+                <tr><td>Composição</td><td>Anotação <code>@Controller</code>.</td><td><code>@Controller</code> combinada com <code>@ResponseBody</code>.</td></tr>
+                <tr><td>Camada View</td><td>Template (Thymeleaf).</td><td>Ausente no servidor: a apresentação é responsabilidade do cliente.</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="callout callout-servidor">
+            <span class="callout-titulo">O que ocorre no Servidor?</span>
+            <p>Em um <code>@Controller</code>, o retorno <code>String</code> é interpretado como nome de View e entregue ao <em>ViewResolver</em>. Em um <code>@RestController</code>, o retorno é escrito no corpo da resposta por um <em>HttpMessageConverter</em> (o Jackson, no caso do JSON) e o <em>ViewResolver</em> não é consultado.</p>
+        </div>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica</span>
+            <p>Este projeto utiliza <code>@Controller</code> porque estuda o padrão MVC com Server-Side Rendering. Em uma API REST, a camada View do MVC deixa de existir no servidor, e o JSON passa a ser a representação do Model.</p>
+        </div>
+            </div>
+        </details>
+    </section>
+
+    <section aria-labelledby="erros">
+        <details class="aprofundamento">
+            <summary>
+        <h2 id="erros">7. Tratamento de exceções com @ControllerAdvice</h2>
+                <span class="selo">Aprofundamento</span>
+            </summary>
+            <div class="aprofundamento-corpo">
+        <p>A anotação <code>@ControllerAdvice</code> permite centralizar, em uma única classe, o tratamento de exceções
+            de todos os controladores. Cada método anotado com <code>@ExceptionHandler</code> trata um tipo de exceção
+            e devolve uma View ou uma resposta, evitando blocos <code>try/catch</code> repetidos. Para APIs, a variante
+            <code>@RestControllerAdvice</code> escreve a resposta de erro diretamente no corpo.</p>
+
+        <figure class="terminal">
+            <figcaption>controller/TratadorGlobalDeErros.java</figcaption>
+<pre th:inline="none"><code><span class="tk-a">@ControllerAdvice</span>
+<span class="tk-k">public</span> <span class="tk-k">class</span> TratadorGlobalDeErros {
+
+    <span class="tk-a">@ExceptionHandler</span>(IllegalArgumentException.<span class="tk-k">class</span>)
+    <span class="tk-k">public</span> <span class="tk-k">String</span> tratarArgumentoInvalido(IllegalArgumentException ex, Model model) {
+        model.addAttribute(<span class="tk-s">"mensagem"</span>, ex.getMessage());
+        <span class="tk-k">return</span> <span class="tk-s">"erro"</span>;               <span class="tk-c">// templates/erro.html</span>
+    }
+}</code></pre>
+        </figure>
+        <div class="callout callout-obs">
+            <span class="callout-titulo">Observação Técnica</span>
+            <p>O projeto não implementa um tratador global. Sem ele, uma exceção não tratada resulta na <em>Whitelabel Error Page</em> padrão do Spring Boot, com status 500, como ocorre quando um template referencia um fragmento inexistente.</p>
+        </div>
+            </div>
+        </details>
+    </section>
+
+    <section aria-labelledby="questoes">
+        <h2 id="questoes">8. Questões de fixação</h2>
+        <details class="questao">
+            <summary>Qual é o objetivo do padrão Post/Redirect/Get?</summary>
+            <div class="resposta"><p>Evitar o reenvio acidental de formulários. Após processar o POST, o servidor responde com um redirecionamento e o navegador faz um GET; assim, atualizar a página repete apenas a consulta, e não a operação de escrita.</p></div>
+        </details>
+        <details class="questao">
+            <summary>Qual é a diferença entre <code>@Controller</code> e <code>@RestController</code>?</summary>
+            <div class="resposta"><p>O <code>@Controller</code> devolve o nome de uma View, renderizada no servidor como HTML. O <code>@RestController</code> equivale a <code>@Controller</code> mais <code>@ResponseBody</code>: o retorno é serializado diretamente no corpo da resposta, em geral como JSON, para consumo por APIs.</p></div>
+        </details>
     </section>
 
     <div class="proxima">
@@ -121,6 +265,10 @@
         <li><a href="#instancias">2. Instâncias associadas</a></li>
         <li><a href="#metodo">3. Anatomia de um método</a></li>
         <li><a href="#rotas">4. Mapa de rotas</a></li>
+        <li><a href="#post">5. POST e Post/Redirect/Get</a></li>
+        <li><a href="#rest">6. @Controller e @RestController</a></li>
+        <li><a href="#erros">7. @ControllerAdvice</a></li>
+        <li><a href="#questoes">8. Questões de fixação</a></li>
     </ul>
 </aside>
 </div>
